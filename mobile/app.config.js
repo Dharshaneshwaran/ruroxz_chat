@@ -1,0 +1,21 @@
+export default ({ config }) => ({
+  ...config,
+  name: 'WhatApp Clone',
+  slug: 'whatapp-clone',
+  version: '1.0.0',
+  orientation: 'portrait',
+  userInterfaceStyle: 'light',
+  assetBundlePatterns: ['**/*'],
+  ios: { supportsTablet: true },
+  android: { adaptiveIcon: { backgroundColor: '#25D366' } },
+  extra: {
+    apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3000',
+    socketUrl: process.env.REACT_APP_SOCKET_URL || 'http://localhost:3000',
+    firebaseApiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+    firebaseAuthDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+    firebaseProjectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    firebaseStorageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    firebaseMessagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    firebaseAppId: process.env.REACT_APP_FIREBASE_APP_ID,
+  },
+});

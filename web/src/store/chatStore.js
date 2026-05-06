@@ -1,0 +1,50 @@
+import { create } from 'zustand';
+
+export const useChatStore = create((set, get) => ({
+  chats: [],
+  messages: {},   // chatId -> Message[]
+  typing: {},     // chatId -> userId[]
+
+  setChats: (chats) => set({ chats }),
+
+  addChat: (chat) =>
+    set((s) => ({ chats: [chat, ...s.chats.filter((c) => c.id !== chat.id)] })),
+
+  // Add message with deduplication by id
+  addMessage: (chatId, message) =>
+    set((s) => {
+      const existing = s.messages[chatId] || [];
+      if (existing.some((m) => m.id === message.id)) return s; // deduplicate
+      return { messages: { ...s.messages, [chatId]: [...existing, message] } };
+    }),
+
+  setMessages: (chatId, messages) =>
+    set((s) => ({ messages: { ...s.messages, [chatId]: messages } })),
+
+  // Update last message preview in chat list and move chat to top
+  updateChatLastMessage: (chatId, message) =>
+    set((s) => {
+      const chat = s.chats.find((c) => c.id === chatId);
+      if (!chat) return s;
+      const updated = { ...chat, messages: [message], updatedAt: message.createdAt };
+      return { chats: [updated, ...s.chats.filter((c) => c.id !== chatId)] };
+    }),
+
+  setTyping: (chatId, userId) =>
+    set((s) => ({
+      typing: {
+        ...s.typing,
+        [chatId]: [...new Set([...(s.typing[chatId] || []), userId])],
+      },
+    })),
+
+  clearTyping: (chatId, userId) =>
+    set((s) => ({
+      typing: {
+        ...s.typing,
+        [chatId]: (s.typing[chatId] || []).filter((id) => id !== userId),
+      },
+    })),
+
+  reset: () => set({ chats: [], messages: {}, typing: {} }),
+}));

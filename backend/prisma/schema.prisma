@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  phoneNumber   String   @unique
+  displayName   String?
+  photoUrl      String?
+  fcmToken      String?  // For Firebase Cloud Messaging
+  webPushToken  String?  // For Web Push Notifications
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  chats         ChatParticipant[]
+  messages      Message[]
+  createdChats  Chat[]
+
+  @@index([phoneNumber])
+}
+
+model Chat {
+  id            String   @id @default(cuid())
+  name          String?  // Null for 1-to-1 chats
+  photoUrl      String?  // Group chat photo
+  isGroup       Boolean  @default(false)
+  createdById   String
+  createdBy     User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  participants  ChatParticipant[]
+  messages      Message[]
+
+  @@index([createdById])
+}
+
+model ChatParticipant {
+  id        String   @id @default(cuid())
+  userId    String
+  chatId    String
+  joinedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatId])
+  @@index([userId])
+  @@index([chatId])
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  content     String
+  senderId    String
+  chatId      String
+  mediaUrl    String?  // Cloudinary URL for images/files
+  mediaType   String?  // 'image', 'file', 'video', etc.
+  createdAt   DateTime @default(now())
+
+  sender      User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  chat        Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([chatId])
+  @@index([createdAt])
+}

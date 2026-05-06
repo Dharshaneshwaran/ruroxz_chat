@@ -1,0 +1,71 @@
+const prisma = require('../config/db');
+const { sendPushNotification } = require('../services/notificationService');
+
+// userId -> socketId
+const onlineUsers = new Map();
+
+const chatSocket = (io) => {
+  io.on('connection', (socket) => {
+    console.log('Socket connected:', socket.id);
+
+    socket.on('join_chats', ({ userId, chatIds }) => {
+      if (userId) {
+        onlineUsers.set(userId, socket.id);
+        socket.userId = userId;
+      }
+      if (Array.isArray(chatIds)) {
+        chatIds.forEach((id) => socket.join(id));
+        console.log(`User ${userId} joined rooms:`, chatIds);
+      }
+    });
+
+    socket.on('send_message', async ({ chatId, senderId, content, mediaUrl, mediaType }) => {
+      try {
+        if (!chatId || !senderId || (!content && !mediaUrl)) return;
+
+        const message = await prisma.message.create({
+          data: { chatId, senderId, content: content || null, mediaUrl: mediaUrl || null, mediaType: mediaType || null },
+          include: { sender: true },
+        });
+
+        await prisma.chat.update({ where: { id: chatId }, data: { updatedAt: new Date() } });
+
+        io.to(chatId).emit('receive_message', message);
+
+        const participants = await prisma.chatParticipant.findMany({
+          where: { chatId, NOT: { userId: senderId } },
+          include: { user: true },
+        });
+
+        for (const { user } of participants) {
+          if (!onlineUsers.has(user.id) && user.fcmToken) {
+            await sendPushNotification({
+              token: user.fcmToken,
+              title: message.sender.displayName || 'New Message',
+              body: content || '📷 Media',
+              data: { chatId },
+            });
+          }
+        }
+      } catch (error) {
+        console.error('send_message socket error:', error);
+        socket.emit('error', { message: 'Failed to send message' });
+      }
+    });
+
+    socket.on('typing', ({ chatId, userId }) => {
+      socket.to(chatId).emit('typing', { chatId, userId });
+    });
+
+    socket.on('stop_typing', ({ chatId, userId }) => {
+      socket.to(chatId).emit('stop_typing', { chatId, userId });
+    });
+
+    socket.on('disconnect', () => {
+      if (socket.userId) onlineUsers.delete(socket.userId);
+      console.log('Socket disconnected:', socket.id);
+    });
+  });
+};
+
+module.exports = chatSocket;
