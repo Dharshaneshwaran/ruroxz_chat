@@ -1,5 +1,7 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+const defaultHost = `${window.location.protocol}//${window.location.hostname}:3000`;
+
+export const API_URL = import.meta.env.VITE_API_URL || defaultHost;
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || defaultHost;
 
 export const FIREBASE_CONFIG = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,

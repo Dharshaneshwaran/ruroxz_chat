@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import '../styles/bubbles.css';
 
-export default function MessageBubble({ message, isOwn, participants }) {
+export default function MessageBubble({ message, isOwn, participants, onDelete }) {
+  const [showDelete, setShowDelete] = useState(false);
   const time = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   // Resolve sender name for group chats
@@ -12,8 +13,18 @@ export default function MessageBubble({ message, isOwn, participants }) {
   // Pastel colors per sender (consistent hue)
   const senderColor = stringToColor(message.senderId);
 
+  const handleDelete = () => {
+    if (onDelete && window.confirm('Delete this message?')) {
+      onDelete(message.id);
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: 2, padding: '1px 0' }}>
+    <div
+      style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: 2, padding: '1px 0' }}
+      onMouseEnter={() => setShowDelete(true)}
+      onMouseLeave={() => setShowDelete(false)}
+    >
       <div
         className={`bubble ${isOwn ? 'bubble-own' : 'bubble-other'}`}
         style={{
@@ -23,8 +34,36 @@ export default function MessageBubble({ message, isOwn, participants }) {
           padding: '6px 10px 8px',
           background: isOwn ? '#005c4b' : '#202c33',
           boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
+          position: 'relative',
         }}
       >
+        {/* Delete button for own messages */}
+        {isOwn && showDelete && (
+          <button
+            onClick={handleDelete}
+            style={{
+              position: 'absolute',
+              top: -8,
+              right: -8,
+              background: '#ff6b6b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              width: 20,
+              height: 20,
+              cursor: 'pointer',
+              fontSize: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            }}
+            title="Delete message"
+          >
+            ×
+          </button>
+        )}
+
         {/* Group sender name */}
         {!isOwn && senderName && (
           <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 3, color: senderColor }}>

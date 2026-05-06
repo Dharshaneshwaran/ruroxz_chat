@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, FlatList, StyleSheet, ActivityIndicator,
-  KeyboardAvoidingView, Platform, Text,
+  KeyboardAvoidingView, Platform, Text, Alert,
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { useChatStore } from '../store/chatStore';
@@ -77,10 +77,22 @@ export default function ChatScreen({ route, navigation }) {
     }
   };
 
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      await api.delete(`/chats/${chat.id}/messages/${messageId}`);
+      // Remove message from local state
+      const updatedMessages = chatMessages.filter(msg => msg.id !== messageId);
+      setMessages(chat.id, updatedMessages);
+    } catch (err) {
+      console.error('handleDeleteMessage error:', err);
+      Alert.alert('Error', 'Failed to delete message');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#25D366" />
+        <ActivityIndicator size="large" color="#6D28D9" />
       </View>
     );
   }
@@ -96,7 +108,11 @@ export default function ChatScreen({ route, navigation }) {
         data={chatMessages}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <MessageBubble message={item} isOwn={item.senderId === user.id} />
+          <MessageBubble
+            message={item}
+            isOwn={item.senderId === user.id}
+            onDelete={handleDeleteMessage}
+          />
         )}
         contentContainerStyle={styles.messageList}
         ListEmptyComponent={<Text style={styles.empty}>No messages yet</Text>}

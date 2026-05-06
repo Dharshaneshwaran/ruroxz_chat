@@ -4,8 +4,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:user1": "set PORT=5173 && vite --mode user1",
+    "dev:user2": "set PORT=5174 && vite --mode user2",
+    "dev:both": "concurrently \"npm run dev:user1\" \"npm run dev:user2\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:user1": "vite preview --port 5173",
+    "preview:user2": "vite preview --port 5174"
   },
   "dependencies": {
     "axios": "^1.5.0",

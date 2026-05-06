@@ -1,12 +1,12 @@
 import React from 'react';
 import { useChatStore } from '../store/chatStore';
 
-export default function ChatItem({ chat, currentUserId, active, onClick }) {
+export default function ChatItem({ chat, currentUserId, active, onClick, onDelete }) {
   const typing = useChatStore((s) => s.typing[chat.id] || []);
   const other = chat.participants?.find((p) => p.userId !== currentUserId);
   const name = chat.isGroup
     ? chat.name || 'Group'
-    : other?.user?.displayName || other?.user?.email || other?.user?.phone || 'Unknown';
+    : other?.user?.displayName || other?.user?.email || other?.user?.phone || 'Me';
 
   const last = chat.messages?.[0];
   const preview = typing.length > 0
@@ -19,16 +19,24 @@ export default function ChatItem({ chat, currentUserId, active, onClick }) {
 
   const initials = (name || 'U').charAt(0).toUpperCase();
 
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    if (onDelete && window.confirm(`Delete ${chat.isGroup ? 'group chat' : 'chat'} "${name}"?`)) {
+      onDelete(chat.id);
+    }
+  };
+
   return (
     <div
       onClick={onClick}
+      onContextMenu={handleContextMenu}
       className={`sidebar-item ${active ? 'active' : ''}`}
-      style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #1f2c33' }}
+      style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '10px 16px', cursor: 'pointer', borderBottom: '1px solid #1f2c33', position: 'relative' }}
     >
       {/* Avatar */}
       <div style={{
         width: 49, height: 49, borderRadius: '50%',
-        background: chat.isGroup ? '#667781' : '#00a884',
+        background: chat.isGroup ? '#667781' : '#6D28D9',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: '#fff', fontWeight: 700, fontSize: 20, flexShrink: 0,
       }}>
@@ -41,13 +49,13 @@ export default function ChatItem({ chat, currentUserId, active, onClick }) {
           <span style={{ color: '#e9edef', fontWeight: 500, fontSize: 17, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
             {name}
           </span>
-          <span style={{ color: typing.length > 0 ? '#00a884' : '#8696a0', fontSize: 12, flexShrink: 0 }}>
+          <span style={{ color: typing.length > 0 ? '#6D28D9' : '#8696a0', fontSize: 12, flexShrink: 0 }}>
             {time}
           </span>
         </div>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
-          color: typing.length > 0 ? '#00a884' : '#8696a0',
+          color: typing.length > 0 ? '#6D28D9' : '#8696a0',
           fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {last && !chat.isGroup && last.senderId === currentUserId && (
@@ -58,6 +66,8 @@ export default function ChatItem({ chat, currentUserId, active, onClick }) {
           </span>
         </div>
       </div>
+
+      {/* Right-click for delete option */}
     </div>
   );
 }

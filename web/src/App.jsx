@@ -13,6 +13,7 @@ import './styles/bubbles.css';
 
 /* ─── New Conversation Modal ─── */
 function NewChatModal({ onClose, onCreated }) {
+  const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState('direct');
   const [input, setInput] = useState('');
   const [groupName, setGroupName] = useState('');
@@ -42,6 +43,16 @@ function NewChatModal({ onClose, onCreated }) {
     finally { setLoading(false); }
   };
 
+  const messageSelf = async () => {
+    if (!user) return;
+    setLoading(true); setErr('');
+    try {
+      const res = await api.post('/chats', { participantIds: [user.id], isGroup: false });
+      onCreated(res.data);
+    } catch (e) { setErr(e.response?.data?.error || 'Failed to start self chat'); }
+    finally { setLoading(false); }
+  };
+
   const addMember = () => {
     if (input.trim() && !members.includes(input.trim())) {
       setMembers((m) => [...m, input.trim()]); setInput('');
@@ -59,8 +70,8 @@ function NewChatModal({ onClose, onCreated }) {
           {['direct', 'group'].map((t) => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: tab === t ? '#00a884' : 'transparent',
-              color: tab === t ? '#fff' : '#8696a0', fontWeight: 600, fontSize: 13, transition: 'all 0.2s',
+              background: tab === t ? '#6D28D9' : 'transparent',
+              color: tab === t ? '#fff' : '#8696a0', fontWeight: 600, fontSize: 13, transition: 'all 0.2s', boxShadow: tab === t ? '0 0 15px rgba(109, 40, 217, 0.8)' : 'none',
             }}>
               {t === 'direct' ? '👤 Direct Chat' : '👥 New Group'}
             </button>
@@ -70,8 +81,11 @@ function NewChatModal({ onClose, onCreated }) {
         {tab === 'direct' ? (
           <form onSubmit={startDirect} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <input value={input} onChange={(e) => setInput(e.target.value)} autoFocus
-              placeholder="Email or phone number (+91...)" style={mStyle.input} />
+              placeholder="Email, phone number, or user id" style={mStyle.input} />
             <button type="submit" disabled={loading} style={mStyle.btn}>{loading ? 'Starting…' : 'Start Chat'}</button>
+            <button type="button" onClick={messageSelf} disabled={loading || !user} style={{ ...mStyle.btn, background: '#1b7f5c' }}>
+              {loading ? 'Starting…' : 'Message myself'}
+            </button>
           </form>
         ) : (
           <form onSubmit={createGroup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -104,7 +118,7 @@ function NewChatModal({ onClose, onCreated }) {
 
 const mStyle = {
   input: { padding: '10px 14px', background: '#2a3942', border: '1px solid #3b4a54', borderRadius: 8, color: '#e9edef', fontSize: 14, outline: 'none', width: '100%' },
-  btn: { background: '#00a884', color: '#fff', border: 'none', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  btn: { background: '#6D28D9', color: '#fff', border: 'none', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 15px rgba(109, 40, 217, 0.6)' },
 };
 
 /* ─── Chat Layout ─── */
@@ -142,6 +156,21 @@ function ChatLayout() {
     navigate(`/chat/${chat.id}`);
   };
 
+  const handleDeleteChat = async (chatId) => {
+    try {
+      await api.delete(`/chats/${chatId}`);
+      // Remove chat from local state
+      setChats(chats.filter(c => c.id !== chatId));
+      // Navigate away if we're in the deleted chat
+      if (activeChatId === chatId) {
+        navigate('/');
+      }
+    } catch (err) {
+      console.error('handleDeleteChat:', err);
+      alert('Failed to delete chat');
+    }
+  };
+
   const handleLogout = () => {
     reset();
     logout();
@@ -162,7 +191,7 @@ function ChatLayout() {
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', background: '#202c33', gap: 10, minHeight: 60 }}>
-          <div style={avatarStyle(40, '#00a884')}>{displayName.charAt(0).toUpperCase()}</div>
+              <div style={avatarStyle(40, '#6D28D9')}>{displayName.charAt(0).toUpperCase()}</div>
           <div style={{ flex: 1 }} />
           <button className="icon-btn" onClick={() => setModal(true)} title="New chat">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="#aebac1">
@@ -190,7 +219,7 @@ function ChatLayout() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-              <div style={{ width: 30, height: 30, border: '3px solid #2a3942', borderTop: '3px solid #00a884', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <div style={{ width: 30, height: 30, border: '3px solid #2a3942', borderTop: '3px solid #6D28D9', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 24px' }}>
@@ -202,7 +231,8 @@ function ChatLayout() {
             filtered.map((chat) => (
               <ChatItem key={chat.id} chat={chat} currentUserId={user?.id}
                 active={chat.id === activeChatId}
-                onClick={() => navigate(`/chat/${chat.id}`)} />
+                onClick={() => navigate(`/chat/${chat.id}`)}
+                onDelete={handleDeleteChat} />
             ))
           )}
         </div>
@@ -229,12 +259,12 @@ function WelcomePane({ onNewChat }) {
       <svg viewBox="0 0 303 172" width="288" height="163" fill="none">
         <path d="M229.565 160.229c32.647-10.984 55.985-41.6 55.985-77.329C285.55 36.788 248.354 0 202.688 0c-45.666 0-82.862 36.788-82.862 82.9 0 14.9 4 28.894 11.007 40.944L110 160l31.024-3.607a83.377 83.377 0 0 0 41.391 11.507h.273c4.192 0 8.327-.3 12.392-.878" fill="#202c33"/>
         <path d="M128.565 134.557c-8.952-15.586-14.1-33.709-14.1-53.05C114.465 36.266 151.663 0 197.327 0c28.27 0 53.24 13.818 68.546 35.046a82.11 82.11 0 0 0-19.77-2.437c-45.666 0-82.862 36.788-82.862 82.9 0 19.14 6.535 36.74 17.374 50.73L158 175l-29.435-40.443z" fill="#2a3942"/>
-        <circle cx="197" cy="82" r="25" fill="#00a884" opacity=".3"/>
-        <circle cx="197" cy="82" r="15" fill="#00a884"/>
+        <circle cx="197" cy="82" r="25" fill="#6D28D9" opacity=".3"/>
+        <circle cx="197" cy="82" r="15" fill="#6D28D9"/>
         <path d="M191 82l4 4 8-8" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
       <div style={{ textAlign: 'center' }}>
-        <h2 style={{ color: '#e9edef', fontWeight: 300, fontSize: 30, marginBottom: 12 }}>WhatApp Clone</h2>
+        <h2 style={{ color: '#e9edef', fontWeight: 300, fontSize: 30, marginBottom: 12 }}>rurozx chat</h2>
         <p style={{ color: '#8696a0', fontSize: 14, lineHeight: 1.6, maxWidth: 400 }}>
           Send and receive messages instantly.<br />Your messages are end-to-end encrypted.
         </p>
@@ -265,7 +295,7 @@ export default function App() {
 
   if (booting) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111b21' }}>
-      <div style={{ width: 40, height: 40, border: '3px solid #2a3942', borderTop: '3px solid #00a884', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ width: 40, height: 40, border: '3px solid #2a3942', borderTop: '3px solid #6D28D9', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
