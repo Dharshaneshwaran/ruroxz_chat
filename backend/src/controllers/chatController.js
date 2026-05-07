@@ -26,14 +26,23 @@ const createChat = async (req, res) => {
     const { participantIds, participantPhones, isGroup, chatName } = req.body;
 
     let resolvedIds = participantIds || [];
+    const contacts = participantPhones?.map((c) => c.trim()).filter(Boolean) || [];
 
-    // Resolve phones to user IDs
-    if (participantPhones?.length) {
+    if (contacts.length) {
+      const phoneContacts = contacts.filter((c) => !c.includes('@'));
+      const emailContacts = contacts.filter((c) => c.includes('@')).map((c) => c.toLowerCase());
+
       const users = await prisma.user.findMany({
-        where: { phone: { in: participantPhones } },
+        where: {
+          OR: [
+            ...(phoneContacts.length ? [{ phone: { in: phoneContacts } }] : []),
+            ...(emailContacts.length ? [{ email: { in: emailContacts } }] : []),
+            ...(contacts.length ? [{ id: { in: contacts } }] : []),
+          ],
+        },
         select: { id: true },
       });
-      if (users.length === 0) return res.status(404).json({ error: 'No users found with those phone numbers' });
+      if (users.length === 0) return res.status(404).json({ error: 'No users found with those contacts' });
       resolvedIds = [...resolvedIds, ...users.map((u) => u.id)];
     }
 
@@ -43,20 +52,34 @@ const createChat = async (req, res) => {
 
     const allIds = [...new Set([req.user.id, ...resolvedIds])];
 
-    if (!isGroup && allIds.length === 2) {
-      const existing = await prisma.chat.findFirst({
-        where: {
-          isGroup: false,
-          AND: allIds.map((userId) => ({
-            participants: { some: { userId } },
-          })),
-        },
-        include: {
-          participants: { include: { user: true } },
-          messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
-        },
-      });
-      if (existing && existing.participants.length === 2) return res.json(existing);
+    if (!isGroup) {
+      if (allIds.length === 1) {
+        const existing = await prisma.chat.findFirst({
+          where: {
+            isGroup: false,
+            participants: { every: { userId: req.user.id } },
+          },
+          include: {
+            participants: { include: { user: true } },
+            messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
+          },
+        });
+        if (existing) return res.json(existing);
+      } else if (allIds.length === 2) {
+        const existing = await prisma.chat.findFirst({
+          where: {
+            isGroup: false,
+            AND: allIds.map((userId) => ({
+              participants: { some: { userId } },
+            })),
+          },
+          include: {
+            participants: { include: { user: true } },
+            messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
+          },
+        });
+        if (existing && existing.participants.length === 2) return res.json(existing);
+      }
     }
 
     const chat = await prisma.chat.create({
@@ -99,4 +122,36 @@ const getChatById = async (req, res) => {
   }
 };
 
-module.exports = { getChats, createChat, getChatById };
+const deleteChat = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user is a participant
+    const participant = await prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId: id, userId: req.user.id } },
+    });
+    if (!participant) return res.status(403).json({ error: 'Not a participant' });
+
+    // For group chats, only admins can delete
+    const chat = await prisma.chat.findUnique({ where: { id } });
+    if (chat.isGroup && participant.role !== 'admin') {
+      return res.status(403).json({ error: 'Only admins can delete group chats' });
+    }
+
+    // Delete all messages first (cascade should handle this, but being explicit)
+    await prisma.message.deleteMany({ where: { chatId: id } });
+
+    // Delete chat participants
+    await prisma.chatParticipant.deleteMany({ where: { chatId: id } });
+
+    // Delete the chat
+    await prisma.chat.delete({ where: { id } });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('deleteChat error:', error);
+    res.status(500).json({ error: 'Failed to delete chat' });
+  }
+};
+
+module.exports = { getChats, createChat, getChatById, deleteChat };

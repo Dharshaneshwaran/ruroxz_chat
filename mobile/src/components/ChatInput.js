@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   sendBtn: {
-    backgroundColor: '#25D366', width: 40, height: 40,
+    backgroundColor: '#6D28D9', width: 40, height: 40,
     borderRadius: 20, justifyContent: 'center', alignItems: 'center',
   },
   sendIcon: { color: '#fff', fontSize: 16 },

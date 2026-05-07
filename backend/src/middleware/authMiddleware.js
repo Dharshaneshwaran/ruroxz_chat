@@ -1,5 +1,8 @@
+const jwt = require('jsonwebtoken');
 const admin = require('../config/firebase');
 const prisma = require('../config/db');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'ruroxz-chat-secret';
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -8,9 +11,18 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: 'No token provided' });
     }
     const token = authHeader.split(' ')[1];
-    const decoded = await admin.auth().verifyIdToken(token);
 
-    const user = await prisma.user.findUnique({ where: { id: decoded.uid } });
+    let decoded;
+    let user;
+
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+      user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    } catch (jwtError) {
+      decoded = await admin.auth().verifyIdToken(token);
+      user = await prisma.user.findUnique({ where: { id: decoded.uid } });
+    }
+
     if (!user) return res.status(401).json({ error: 'User not found' });
 
     req.user = user;

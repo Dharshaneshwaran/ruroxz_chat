@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 
-export default function ChatItem({ chat, currentUserId, onPress }) {
+export default function ChatItem({ chat, currentUserId, onPress, onDelete }) {
   const otherParticipant = chat.participants?.find((p) => p.userId !== currentUserId);
   const name = chat.isGroup
     ? chat.name || 'Group'
-    : otherParticipant?.user?.displayName || otherParticipant?.user?.phone || 'Unknown';
+    : otherParticipant?.user?.displayName || otherParticipant?.user?.phone || 'Me';
 
   const lastMessage = chat.messages?.[0];
   const preview = lastMessage?.content || (lastMessage?.mediaUrl ? '📷 Media' : 'No messages yet');
@@ -15,8 +15,24 @@ export default function ChatItem({ chat, currentUserId, onPress }) {
 
   const initials = (name || 'U').charAt(0).toUpperCase();
 
+  const handleLongPress = () => {
+    Alert.alert(
+      'Delete Chat',
+      `Delete ${chat.isGroup ? 'group chat' : 'chat'} "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => onDelete && onDelete(chat.id) },
+      ]
+    );
+  };
+
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onPress}
+      onLongPress={handleLongPress}
+      activeOpacity={0.7}
+    >
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initials}</Text>
       </View>
@@ -39,7 +55,7 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: '#25D366', justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    backgroundColor: '#6D28D9', justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   content: { flex: 1 },

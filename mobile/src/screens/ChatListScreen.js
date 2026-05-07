@@ -40,6 +40,16 @@ export default function ChatListScreen({ navigation }) {
     }
   };
 
+  const handleDeleteChat = async (chatId) => {
+    try {
+      await api.delete(`/chats/${chatId}`);
+      setChats(chats.filter(c => c.id !== chatId));
+    } catch (err) {
+      console.error('handleDeleteChat error:', err);
+      Alert.alert('Error', 'Failed to delete chat');
+    }
+  };
+
   const startDirectChat = async () => {
     const phone = phoneInput.trim();
     if (!phone) return;
@@ -60,10 +70,23 @@ export default function ChatListScreen({ navigation }) {
     }
   };
 
+  const startSelfChat = async () => {
+    setSearching(true);
+    try {
+      const res = await api.post('/chats', { participantIds: [user.id], isGroup: false });
+      addChat(res.data);
+      navigation.navigate('Chat', { chat: res.data });
+    } catch (err) {
+      Alert.alert('Error', err.response?.data?.error || 'Failed to start self chat');
+    } finally {
+      setSearching(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#25D366" />
+        <ActivityIndicator size="large" color="#6D28D9" />
       </View>
     );
   }
@@ -73,6 +96,9 @@ export default function ChatListScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>WhatApp Clone</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={startSelfChat} style={styles.headerBtn}>
+            <Text style={styles.headerBtnText}>Me</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('CreateGroup')}
             style={styles.headerBtn}
@@ -88,10 +114,11 @@ export default function ChatListScreen({ navigation }) {
       <View style={styles.searchRow}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Start chat by phone (+91...)"
+          placeholder="Start chat by phone, email, or user id"
           value={phoneInput}
           onChangeText={setPhoneInput}
-          keyboardType="phone-pad"
+          keyboardType="default"
+          autoCapitalize="none"
         />
         <TouchableOpacity style={styles.goBtn} onPress={startDirectChat} disabled={searching}>
           {searching ? (
@@ -110,6 +137,7 @@ export default function ChatListScreen({ navigation }) {
             chat={item}
             currentUserId={user.id}
             onPress={() => navigation.navigate('Chat', { chat: item })}
+            onDelete={handleDeleteChat}
           />
         )}
         ListEmptyComponent={
@@ -125,7 +153,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, backgroundColor: '#25D366',
+    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, backgroundColor: '#6D28D9',
   },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   headerActions: { flexDirection: 'row', gap: 8 },
@@ -133,7 +161,7 @@ const styles = StyleSheet.create({
   headerBtnText: { color: '#fff', fontSize: 13 },
   searchRow: { flexDirection: 'row', padding: 12, gap: 8, borderBottomWidth: 1, borderColor: '#eee' },
   searchInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 8, fontSize: 14 },
-  goBtn: { backgroundColor: '#25D366', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
+  goBtn: { backgroundColor: '#6D28D9', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
   goBtnText: { color: '#fff', fontWeight: 'bold' },
   empty: { textAlign: 'center', marginTop: 48, color: '#999' },
 });

@@ -13,11 +13,12 @@ datasource db {
 
 model User {
   id            String   @id @default(cuid())
-  phoneNumber   String   @unique
+  email         String?  @unique
+  phone         String?  @unique
   displayName   String?
   photoUrl      String?
-  fcmToken      String?  // For Firebase Cloud Messaging
-  webPushToken  String?  // For Web Push Notifications
+  fcmToken      String?
+  webPushToken  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -26,7 +27,8 @@ model User {
   messages      Message[]
   createdChats  Chat[]
 
-  @@index([phoneNumber])
+  @@index([email])
+  @@index([phone])
 }
 
 model Chat {

@@ -55,4 +55,35 @@ const sendMessage = async (req, res) => {
   }
 };
 
-module.exports = { getMessages, sendMessage };
+const deleteMessage = async (req, res) => {
+  try {
+    const { chatId, messageId } = req.params;
+
+    const participant = await prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId: req.user.id } },
+    });
+    if (!participant) return res.status(403).json({ error: 'Not a participant' });
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) return res.status(404).json({ error: 'Message not found' });
+
+    // Only allow sender to delete their own messages
+    if (message.senderId !== req.user.id) {
+      return res.status(403).json({ error: 'Can only delete your own messages' });
+    }
+
+    await prisma.message.delete({
+      where: { id: messageId },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('deleteMessage error:', error);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+};
+
+module.exports = { getMessages, sendMessage, deleteMessage };

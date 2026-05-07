@@ -106,14 +106,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
-    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, backgroundColor: '#25D366',
+    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, backgroundColor: '#6D28D9',
   },
   back: { color: '#fff', fontSize: 16 },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   body: { padding: 16, flex: 1 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, marginBottom: 12 },
   addRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  addBtn: { backgroundColor: '#25D366', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
+  addBtn: { backgroundColor: '#6D28D9', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
   addBtnText: { color: '#fff', fontWeight: 'bold' },
   participantList: { flex: 1, marginBottom: 16 },
   participantRow: {
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   participantPhone: { fontSize: 14 },
   removeBtn: { color: '#e74c3c', fontSize: 16, paddingHorizontal: 8 },
   createBtn: {
-    backgroundColor: '#25D366', padding: 14, borderRadius: 8, alignItems: 'center',
+    backgroundColor: '#6D28D9', padding: 14, borderRadius: 8, alignItems: 'center',
   },
   createBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });
