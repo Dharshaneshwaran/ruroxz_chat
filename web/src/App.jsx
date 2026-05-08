@@ -12,6 +12,57 @@ import ChatItem from './components/ChatItem';
 import './styles/bubbles.css';
 
 /* ─── New Conversation Modal ─── */
+/* ─── Settings / Profile Modal ─── */
+function SettingsModal({ onClose }) {
+  const { user, setUser } = useAuthStore();
+  const [name, setName] = useState(user?.displayName || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState({ text: '', type: '' });
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setLoading(true); setMsg({ text: '', type: '' });
+    try {
+      const res = await api.put('/auth/profile', { displayName: name, phoneNumber: phone });
+      setUser(res.data);
+      setMsg({ text: 'Profile updated successfully!', type: 'success' });
+      setTimeout(onClose, 1500);
+    } catch (err) {
+      setMsg({ text: err.response?.data?.error || 'Failed to update profile', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
+      <div style={{ background: '#233138', borderRadius: 16, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ color: '#e9edef', fontWeight: 600, fontSize: 18 }}>Profile Settings</h3>
+          <button onClick={onClose} className="icon-btn">✕</button>
+        </div>
+        
+        {msg.text && (
+          <p style={{ color: msg.type === 'error' ? '#ff6b6b' : '#25D366', fontSize: 13, marginBottom: 12 }}>{msg.text}</p>
+        )}
+
+        <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ color: '#8696a0', fontSize: 13, display: 'block', marginBottom: 6 }}>Display Name</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Name" style={mStyle.input} />
+          </div>
+          <div>
+            <label style={{ color: '#8696a0', fontSize: 13, display: 'block', marginBottom: 6 }}>Phone Number</label>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91XXXXXXXXXX" style={mStyle.input} />
+          </div>
+          <button type="submit" disabled={loading} style={mStyle.btn}>{loading ? 'Saving…' : 'Save Changes'}</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function NewChatModal({ onClose, onCreated }) {
   const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState('direct');
@@ -70,8 +121,8 @@ function NewChatModal({ onClose, onCreated }) {
           {['direct', 'group'].map((t) => (
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: tab === t ? '#6D28D9' : 'transparent',
-              color: tab === t ? '#fff' : '#8696a0', fontWeight: 600, fontSize: 13, transition: 'all 0.2s', boxShadow: tab === t ? '0 0 15px rgba(109, 40, 217, 0.8)' : 'none',
+              background: tab === t ? '#25D366' : 'transparent',
+              color: tab === t ? '#fff' : '#8696a0', fontWeight: 600, fontSize: 13, transition: 'all 0.2s', boxShadow: tab === t ? '0 0 15px rgba(37, 211, 102, 0.8)' : 'none',
             }}>
               {t === 'direct' ? '👤 Direct Chat' : '👥 New Group'}
             </button>
@@ -118,7 +169,7 @@ function NewChatModal({ onClose, onCreated }) {
 
 const mStyle = {
   input: { padding: '10px 14px', background: '#2a3942', border: '1px solid #3b4a54', borderRadius: 8, color: '#e9edef', fontSize: 14, outline: 'none', width: '100%' },
-  btn: { background: '#6D28D9', color: '#fff', border: 'none', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 15px rgba(109, 40, 217, 0.6)' },
+  btn: { background: '#25D366', color: '#fff', border: 'none', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 15px rgba(37, 211, 102, 0.6)' },
 };
 
 /* ─── Chat Layout ─── */
@@ -129,6 +180,7 @@ function ChatLayout() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(false);
+  const [settingsModal, setSettingsModal] = useState(false);
   const navigate = useNavigate();
   const { chatId: activeChatId } = useParams();
 
@@ -191,7 +243,9 @@ function ChatLayout() {
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', background: '#202c33', gap: 10, minHeight: 60 }}>
-              <div style={avatarStyle(40, '#6D28D9')}>{displayName.charAt(0).toUpperCase()}</div>
+          <div style={{ ...avatarStyle(40, '#25D366'), cursor: 'pointer' }} onClick={() => setSettingsModal(true)} title="Profile settings">
+            {displayName.charAt(0).toUpperCase()}
+          </div>
           <div style={{ flex: 1 }} />
           <button className="icon-btn" onClick={() => setModal(true)} title="New chat">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="#aebac1">
@@ -219,7 +273,7 @@ function ChatLayout() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-              <div style={{ width: 30, height: 30, border: '3px solid #2a3942', borderTop: '3px solid #6D28D9', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <div style={{ width: 30, height: 30, border: '3px solid #2a3942', borderTop: '3px solid #25D366', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 24px' }}>
@@ -247,6 +301,7 @@ function ChatLayout() {
       </div>
 
       {modal && <NewChatModal onClose={() => setModal(false)} onCreated={handleChatCreated} />}
+      {settingsModal && <SettingsModal onClose={() => setSettingsModal(false)} />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
@@ -259,12 +314,12 @@ function WelcomePane({ onNewChat }) {
       <svg viewBox="0 0 303 172" width="288" height="163" fill="none">
         <path d="M229.565 160.229c32.647-10.984 55.985-41.6 55.985-77.329C285.55 36.788 248.354 0 202.688 0c-45.666 0-82.862 36.788-82.862 82.9 0 14.9 4 28.894 11.007 40.944L110 160l31.024-3.607a83.377 83.377 0 0 0 41.391 11.507h.273c4.192 0 8.327-.3 12.392-.878" fill="#202c33"/>
         <path d="M128.565 134.557c-8.952-15.586-14.1-33.709-14.1-53.05C114.465 36.266 151.663 0 197.327 0c28.27 0 53.24 13.818 68.546 35.046a82.11 82.11 0 0 0-19.77-2.437c-45.666 0-82.862 36.788-82.862 82.9 0 19.14 6.535 36.74 17.374 50.73L158 175l-29.435-40.443z" fill="#2a3942"/>
-        <circle cx="197" cy="82" r="25" fill="#6D28D9" opacity=".3"/>
-        <circle cx="197" cy="82" r="15" fill="#6D28D9"/>
+        <circle cx="197" cy="82" r="25" fill="#25D366" opacity=".3"/>
+        <circle cx="197" cy="82" r="15" fill="#25D366"/>
         <path d="M191 82l4 4 8-8" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
       <div style={{ textAlign: 'center' }}>
-        <h2 style={{ color: '#e9edef', fontWeight: 300, fontSize: 30, marginBottom: 12 }}>rurozx chat</h2>
+        <h2 style={{ color: '#e9edef', fontWeight: 300, fontSize: 30, marginBottom: 12 }}>WhatApp Clone</h2>
         <p style={{ color: '#8696a0', fontSize: 14, lineHeight: 1.6, maxWidth: 400 }}>
           Send and receive messages instantly.<br />Your messages are end-to-end encrypted.
         </p>
@@ -295,7 +350,7 @@ export default function App() {
 
   if (booting) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111b21' }}>
-      <div style={{ width: 40, height: 40, border: '3px solid #2a3942', borderTop: '3px solid #6D28D9', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <div style={{ width: 40, height: 40, border: '3px solid #2a3942', borderTop: '3px solid #25D366', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

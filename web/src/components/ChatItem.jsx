@@ -36,7 +36,7 @@ export default function ChatItem({ chat, currentUserId, active, onClick, onDelet
       {/* Avatar */}
       <div style={{
         width: 49, height: 49, borderRadius: '50%',
-        background: chat.isGroup ? '#667781' : '#6D28D9',
+        background: chat.isGroup ? '#667781' : '#25D366',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: '#fff', fontWeight: 700, fontSize: 20, flexShrink: 0,
       }}>
@@ -49,13 +49,13 @@ export default function ChatItem({ chat, currentUserId, active, onClick, onDelet
           <span style={{ color: '#e9edef', fontWeight: 500, fontSize: 17, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
             {name}
           </span>
-          <span style={{ color: typing.length > 0 ? '#6D28D9' : '#8696a0', fontSize: 12, flexShrink: 0 }}>
+          <span style={{ color: typing.length > 0 ? '#25D366' : '#8696a0', fontSize: 12, flexShrink: 0 }}>
             {time}
           </span>
         </div>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
-          color: typing.length > 0 ? '#6D28D9' : '#8696a0',
+          color: typing.length > 0 ? '#25D366' : '#8696a0',
           fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {last && !chat.isGroup && last.senderId === currentUserId && (

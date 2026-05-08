@@ -83,12 +83,12 @@ export default function Chat() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#111b21' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: '#202c33', flexShrink: 0, minHeight: 60 }}>
-        <div style={avatar(49, chat?.isGroup ? '#667781' : '#6D28D9')}>
+        <div style={avatar(49, chat?.isGroup ? '#667781' : '#25D366')}>
           {(chatName || 'C').charAt(0).toUpperCase()}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ color: '#e9edef', fontWeight: 600, fontSize: 17 }}>{chatName}</div>
-          <div style={{ color: isTyping ? '#6D28D9' : '#8696a0', fontSize: 13, minHeight: 18 }}>
+          <div style={{ color: isTyping ? '#25D366' : '#8696a0', fontSize: 13, minHeight: 18 }}>
             {isTyping ? 'typing…' : chat?.isGroup ? `${memberCount} members` : ''}
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function Chat() {
       <div ref={containerRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 5%', background: '#0a0e11' }}>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-            <div style={{ width: 32, height: 32, border: '3px solid #2a3942', borderTop: '3px solid #6D28D9', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: 32, height: 32, border: '3px solid #2a3942', borderTop: '3px solid #25D366', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
           </div>
         ) : chatMessages.length === 0 ? (
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>

@@ -86,7 +86,7 @@ export default function ChatListScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6D28D9" />
+        <ActivityIndicator size="large" color="#25D366" />
       </View>
     );
   }
@@ -96,8 +96,8 @@ export default function ChatListScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>WhatApp Clone</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={startSelfChat} style={styles.headerBtn}>
-            <Text style={styles.headerBtnText}>Me</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.headerBtn}>
+            <Text style={styles.headerBtnText}>Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('CreateGroup')}
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, backgroundColor: '#6D28D9',
+    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 12, backgroundColor: '#25D366',
   },
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
   headerActions: { flexDirection: 'row', gap: 8 },
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   headerBtnText: { color: '#fff', fontSize: 13 },
   searchRow: { flexDirection: 'row', padding: 12, gap: 8, borderBottomWidth: 1, borderColor: '#eee' },
   searchInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 8, fontSize: 14 },
-  goBtn: { backgroundColor: '#6D28D9', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
+  goBtn: { backgroundColor: '#25D366', paddingHorizontal: 16, borderRadius: 8, justifyContent: 'center' },
   goBtnText: { color: '#fff', fontWeight: 'bold' },
   empty: { textAlign: 'center', marginTop: 48, color: '#999' },
 });

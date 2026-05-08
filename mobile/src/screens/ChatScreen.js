@@ -92,7 +92,7 @@ export default function ChatScreen({ route, navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#6D28D9" />
+        <ActivityIndicator size="large" color="#25D366" />
       </View>
     );
   }

@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
-    backgroundColor: '#6D28D9', justifyContent: 'center', alignItems: 'center', marginRight: 12,
+    backgroundColor: '#25D366', justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
   avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   content: { flex: 1 },
