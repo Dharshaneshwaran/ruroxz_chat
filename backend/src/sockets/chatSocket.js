@@ -28,25 +28,28 @@ const chatSocket = (io) => {
           include: { sender: true },
         });
 
-        await prisma.chat.update({ where: { id: chatId }, data: { updatedAt: new Date() } });
-
+        // Emit immediately after DB write — don't block on secondary updates
         io.to(chatId).emit('receive_message', message);
 
-        const participants = await prisma.chatParticipant.findMany({
+        // Run chat timestamp update and push notifications in background
+        prisma.chat.update({ where: { id: chatId }, data: { updatedAt: new Date() } }).catch(console.error);
+
+        prisma.chatParticipant.findMany({
           where: { chatId, NOT: { userId: senderId } },
           include: { user: true },
-        });
-
-        for (const { user } of participants) {
-          if (!onlineUsers.has(user.id) && user.fcmToken) {
-            await sendPushNotification({
-              token: user.fcmToken,
-              title: message.sender.displayName || 'New Message',
-              body: content || '📷 Media',
-              data: { chatId },
-            });
+        }).then(async (participants) => {
+          for (const { user } of participants) {
+            if (!onlineUsers.has(user.id) && user.fcmToken) {
+              await sendPushNotification({
+                token: user.fcmToken,
+                title: message.sender.displayName || 'New Message',
+                body: content || 'Media',
+                data: { chatId },
+              });
+            }
           }
-        }
+        }).catch(console.error);
+
       } catch (error) {
         console.error('send_message socket error:', error);
         socket.emit('error', { message: 'Failed to send message' });

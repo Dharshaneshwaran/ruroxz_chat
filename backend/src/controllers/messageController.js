@@ -1,4 +1,6 @@
 const prisma = require('../config/db');
+const { addBytes } = require('../services/storageTracker');
+const socketService = require('../services/socketService');
 
 const getMessages = async (req, res) => {
   try {
@@ -29,8 +31,14 @@ const sendMessage = async (req, res) => {
   try {
     const { chatId } = req.params;
     const { content } = req.body;
-    const mediaUrl = req.file?.path || null;
+    const mediaUrl = req.file
+      ? `${process.env.R2_PUBLIC_URL}/${req.file.key}`
+      : null;
     const mediaType = req.file ? req.file.mimetype.split('/')[0] : null;
+
+    if (req.file?.size) {
+      addBytes(req.file.size).catch((err) => console.error('[Storage] addBytes failed:', err.message));
+    }
 
     if (!content && !mediaUrl) {
       return res.status(400).json({ error: 'content or media required' });
@@ -47,6 +55,9 @@ const sendMessage = async (req, res) => {
     });
 
     await prisma.chat.update({ where: { id: chatId }, data: { updatedAt: new Date() } });
+
+    const io = socketService.getIO();
+    if (io) io.to(chatId).emit('receive_message', message);
 
     res.status(201).json(message);
   } catch (error) {

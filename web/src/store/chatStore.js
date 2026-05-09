@@ -10,12 +10,16 @@ export const useChatStore = create((set, get) => ({
   addChat: (chat) =>
     set((s) => ({ chats: [chat, ...s.chats.filter((c) => c.id !== chat.id)] })),
 
-  // Add message with deduplication by id
+  // Add message — deduplicates by id; when a real message arrives, drops matching temp entries
   addMessage: (chatId, message) =>
     set((s) => {
       const existing = s.messages[chatId] || [];
-      if (existing.some((m) => m.id === message.id)) return s; // deduplicate
-      return { messages: { ...s.messages, [chatId]: [...existing, message] } };
+      if (existing.some((m) => m.id === message.id)) return s;
+      const isReal = !message.id.startsWith('temp-');
+      const filtered = isReal
+        ? existing.filter((m) => !(m.id.startsWith('temp-') && m.senderId === message.senderId && m.content === message.content))
+        : existing;
+      return { messages: { ...s.messages, [chatId]: [...filtered, message] } };
     }),
 
   setMessages: (chatId, messages) =>

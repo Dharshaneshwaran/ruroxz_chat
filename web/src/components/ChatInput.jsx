@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import EmojiPicker from 'emoji-picker-react';
 import socket from '../services/socket';
 
 const MAX_FILE_MB = 16;
@@ -7,8 +8,22 @@ let typingTimer = null;
 export default function ChatInput({ chatId, userId, onSend }) {
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
   const fileRef = useRef(null);
   const textRef = useRef(null);
+  const emojiRef = useRef(null);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    if (!showEmoji) return;
+    const handler = (e) => {
+      if (emojiRef.current && !emojiRef.current.contains(e.target)) {
+        setShowEmoji(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showEmoji]);
 
   const emitTyping = useCallback(() => {
     if (!isTyping) {
@@ -24,7 +39,6 @@ export default function ChatInput({ chatId, userId, onSend }) {
 
   const handleChange = (e) => {
     setText(e.target.value);
-    // Auto-resize
     const el = e.target;
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 140) + 'px';
@@ -36,9 +50,7 @@ export default function ChatInput({ chatId, userId, onSend }) {
     if (!content) return;
     onSend({ content });
     setText('');
-    // Reset height
-    if (textRef.current) { textRef.current.style.height = 'auto'; }
-    // Stop typing indicator
+    if (textRef.current) textRef.current.style.height = 'auto';
     clearTimeout(typingTimer);
     socket.emit('stop_typing', { chatId, userId });
     setIsTyping(false);
@@ -47,6 +59,7 @@ export default function ChatInput({ chatId, userId, onSend }) {
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    if (e.key === 'Escape') setShowEmoji(false);
   };
 
   const handleFile = (e) => {
@@ -59,20 +72,59 @@ export default function ChatInput({ chatId, userId, onSend }) {
     e.target.value = '';
   };
 
+  const onEmojiClick = (emojiData) => {
+    const emoji = emojiData.emoji;
+    const el = textRef.current;
+    if (el) {
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const newText = text.slice(0, start) + emoji + text.slice(end);
+      setText(newText);
+      // restore cursor after emoji
+      setTimeout(() => {
+        el.focus();
+        el.selectionStart = el.selectionEnd = start + emoji.length;
+      }, 0);
+    } else {
+      setText((t) => t + emoji);
+    }
+  };
+
   const hasText = text.trim().length > 0;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, padding: '10px 16px', background: '#202c33', flexShrink: 0 }}>
-      {/* Emoji (placeholder) */}
-      <button className="icon-btn" title="Emoji">
-        <svg viewBox="0 0 24 24" width="24" height="24" fill="#aebac1">
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 8, padding: '10px 16px', background: '#202c33', flexShrink: 0 }}>
+
+      {/* Emoji Picker */}
+      {showEmoji && (
+        <div ref={emojiRef} style={{ position: 'absolute', bottom: 70, left: 16, zIndex: 100 }}>
+          <EmojiPicker
+            onEmojiClick={onEmojiClick}
+            theme="dark"
+            searchDisabled={false}
+            skinTonesDisabled
+            height={380}
+            width={320}
+            previewConfig={{ showPreview: false }}
+          />
+        </div>
+      )}
+
+      {/* Emoji button */}
+      <button
+        className="icon-btn"
+        title="Emoji"
+        onClick={() => setShowEmoji((v) => !v)}
+        style={{ color: showEmoji ? '#25D366' : undefined }}
+      >
+        <svg viewBox="0 0 24 24" width="24" height="24" fill={showEmoji ? '#25D366' : '#aebac1'}>
           <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.486 22 2 17.514 2 12S6.486 2 12 2s10 4.486 10 10-4.486 10-10 10zm-5-9h10v2H7v-2zm2-4a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0zm6 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0z"/>
         </svg>
       </button>
 
       {/* Attach */}
       <input type="file" ref={fileRef} style={{ display: 'none' }}
-        onChange={handleFile} accept="image/*,application/pdf,video/*,audio/*,.doc,.docx,.xls,.xlsx" />
+        onChange={handleFile} accept="image/*,application/pdf,video/mp4" />
       <button className="icon-btn" title="Attach file" onClick={() => fileRef.current?.click()}>
         <svg viewBox="0 0 24 24" width="24" height="24" fill="#aebac1">
           <path d="M21.586 10.461l-10.05 10.075a6.5 6.5 0 0 1-9.143-9.242l10.05-10.075a4 4 0 0 1 5.657 5.657l-9.9 9.9a1.5 1.5 0 0 1-2.121-2.121l9.9-9.9-1.415-1.414-9.9 9.9a3.5 3.5 0 0 0 4.95 4.95l9.9-9.9a6 6 0 0 0-8.484-8.485l-10.05 10.075a8.5 8.5 0 0 0 12.02 12.03l10.05-10.075-1.414-1.375z"/>

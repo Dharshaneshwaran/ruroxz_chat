@@ -10,7 +10,7 @@ import ChatInput from '../components/ChatInput';
 export default function Chat() {
   const { chatId } = useParams();
   const user = useAuthStore((s) => s.user);
-  const { messages, setMessages, chats, typing } = useChatStore();
+  const { messages, setMessages, addMessage, updateChatLastMessage, chats, typing } = useChatStore();
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef(null);
   const containerRef = useRef(null);
@@ -56,14 +56,28 @@ export default function Chat() {
         const fd = new FormData();
         fd.append('media', file);
         if (content) fd.append('content', content);
-        await api.post(`/chats/${chatId}/messages`, fd);
+        const res = await api.post(`/chats/${chatId}/messages`, fd);
+        addMessage(chatId, res.data);
+        updateChatLastMessage(chatId, res.data);
       } else if (content?.trim()) {
+        const optimistic = {
+          id: `temp-${Date.now()}`,
+          chatId,
+          senderId: user?.id,
+          content: content.trim(),
+          mediaUrl: null,
+          mediaType: null,
+          createdAt: new Date().toISOString(),
+          sender: user,
+        };
+        addMessage(chatId, optimistic);
+        updateChatLastMessage(chatId, optimistic);
         socket.emit('send_message', { chatId, senderId: user?.id, content: content.trim() });
       }
     } catch (err) {
       console.error('handleSend:', err);
     }
-  }, [chatId, user?.id]);
+  }, [chatId, user, addMessage, updateChatLastMessage]);
 
   const handleDeleteMessage = async (messageId) => {
     try {

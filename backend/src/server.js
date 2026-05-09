@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const app = require('./app');
 const chatSocket = require('./sockets/chatSocket');
+const socketService = require('./services/socketService');
 
 const PORT = process.env.PORT || 3000;
 
@@ -11,6 +12,7 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });
 
+socketService.init(io);
 chatSocket(io);
 
 server.listen(PORT, () => {
