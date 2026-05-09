@@ -1,122 +1,175 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { useChatStore } from '../store/chatStore';
 import '../styles/bubbles.css';
+
+const PHONE_RE = /(\+?\d[\d\s().-]{5,}\d)/g;
 
 export default function MessageBubble({ message, isOwn, participants, onDelete }) {
   const [showDelete, setShowDelete] = useState(false);
+  const [selectedPhone, setSelectedPhone] = useState('');
+  const [lookup, setLookup] = useState({ loading: false, user: null, error: '' });
+  const [openingChat, setOpeningChat] = useState(false);
+  const addChat = useChatStore((s) => s.addChat);
+  const navigate = useNavigate();
   const time = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  // Resolve sender name for group chats
-  const sender = message.sender
-    || participants?.find((p) => p.userId === message.senderId)?.user;
+  const sender = message.sender || participants?.find((p) => p.userId === message.senderId)?.user;
   const senderName = sender?.displayName || sender?.email || sender?.phone || '';
-
-  // Pastel colors per sender (consistent hue)
   const senderColor = stringToColor(message.senderId);
 
   const handleDelete = () => {
-    if (onDelete && window.confirm('Delete this message?')) {
-      onDelete(message.id);
+    if (onDelete && window.confirm('Delete this message?')) onDelete(message.id);
+  };
+
+  const handlePhoneClick = async (rawPhone) => {
+    const phone = normalizePhone(rawPhone);
+    setSelectedPhone(phone);
+    setLookup({ loading: true, user: null, error: '' });
+    try {
+      const res = await api.get('/auth/lookup-phone', { params: { phone } });
+      setLookup({ loading: false, user: res.data.user, error: '' });
+    } catch (error) {
+      setLookup({
+        loading: false,
+        user: null,
+        error: error.response?.status === 404 ? 'No account found for this number' : 'Could not check this number',
+      });
+    }
+  };
+
+  const openChat = async () => {
+    if (!selectedPhone) return;
+    setOpeningChat(true);
+    try {
+      const res = await api.post('/chats', { participantPhones: [selectedPhone], isGroup: false });
+      addChat(res.data);
+      navigate(`/chat/${res.data.id}`);
+      setSelectedPhone('');
+    } catch (error) {
+      setLookup((current) => ({
+        ...current,
+        error: error.response?.data?.error || 'Could not open chat for this number',
+      }));
+    } finally {
+      setOpeningChat(false);
     }
   };
 
   return (
     <div
-      style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: 2, padding: '1px 0' }}
+      className={`message-row ${isOwn ? 'own' : 'other'}`}
       onMouseEnter={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}
     >
-      <div
-        className={`bubble ${isOwn ? 'bubble-own' : 'bubble-other'}`}
-        style={{
-          maxWidth: '65%',
-          minWidth: 80,
-          borderRadius: isOwn ? '8px 8px 2px 8px' : '8px 8px 8px 2px',
-          padding: '6px 10px 8px',
-          background: isOwn ? '#005c4b' : '#202c33',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.25)',
-          position: 'relative',
-        }}
-      >
-        {/* Delete button for own messages */}
+      <div className={`bubble ${isOwn ? 'bubble-own' : 'bubble-other'}`}>
         {isOwn && showDelete && (
-          <button
-            onClick={handleDelete}
-            style={{
-              position: 'absolute',
-              top: -8,
-              right: -8,
-              background: '#ff6b6b',
-              color: 'white',
-              border: 'none',
-              borderRadius: '50%',
-              width: 20,
-              height: 20,
-              cursor: 'pointer',
-              fontSize: 12,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            }}
-            title="Delete message"
-          >
+          <button onClick={handleDelete} className="bubble-delete" title="Delete message">
             ×
           </button>
         )}
 
-        {/* Group sender name */}
         {!isOwn && senderName && (
-          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 3, color: senderColor }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, color: senderColor }}>
             {senderName}
           </div>
         )}
 
-        {/* Image media */}
         {message.mediaUrl && message.mediaType === 'image' && (
           <img
             src={message.mediaUrl}
             alt="media"
-            style={{ maxWidth: 300, maxHeight: 220, borderRadius: 6, display: 'block', marginBottom: 4, cursor: 'pointer' }}
+            className="bubble-media"
             onClick={() => window.open(message.mediaUrl, '_blank')}
           />
         )}
 
-        {/* File/video media */}
         {message.mediaUrl && message.mediaType !== 'image' && (
-          <a
-            href={message.mediaUrl}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#53bdeb', fontSize: 13, textDecoration: 'none', marginBottom: 4, padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 6 }}
-          >
-            <span style={{ fontSize: 20 }}>📎</span>
+          <a href={message.mediaUrl} target="_blank" rel="noreferrer" className="attachment-link">
+            <span>Attachment</span>
             <span>View attachment</span>
           </a>
         )}
 
-        {/* Text content */}
         {message.content && (
-          <div style={{ color: '#e9edef', fontSize: 14.5, lineHeight: 1.45, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>
-            {message.content}
+          <div className="bubble-text">
+            <PhoneAwareText text={message.content} onPhoneClick={handlePhoneClick} />
           </div>
         )}
 
-        {/* Timestamp + ticks */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3, marginTop: 3 }}>
-          <span style={{ color: '#8696a0', fontSize: 11 }}>{time}</span>
-          {isOwn && (
-            <span style={{ color: '#53bdeb', fontSize: 14, lineHeight: 1 }}>✓✓</span>
-          )}
+        {selectedPhone && (
+          <PhoneActionCard
+            phone={selectedPhone}
+            lookup={lookup}
+            openingChat={openingChat}
+            onChat={openChat}
+            onClose={() => setSelectedPhone('')}
+          />
+        )}
+
+        <div className="bubble-meta">
+          <span className="bubble-time">{time}</span>
+          {isOwn && <span className="chat-ticks">✓✓</span>}
         </div>
       </div>
     </div>
   );
 }
 
-// Deterministic pastel color from userId string
+function PhoneAwareText({ text, onPhoneClick }) {
+  const parts = String(text).split(PHONE_RE);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+    if (isPhoneNumber(part)) {
+      return (
+        <button
+          key={`${part}-${index}`}
+          type="button"
+          className="message-phone-link"
+          onClick={() => onPhoneClick(part)}
+        >
+          {part}
+        </button>
+      );
+    }
+    return <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>;
+  });
+}
+
+function PhoneActionCard({ phone, lookup, openingChat, onChat, onClose }) {
+  const name = lookup.user?.displayName || lookup.user?.phone || lookup.user?.email || phone;
+
+  return (
+    <div className="message-phone-card">
+      <div className="message-phone-top">
+        <div>
+          <strong>{lookup.loading ? 'Checking database...' : name}</strong>
+          <span>{lookup.error || (lookup.user ? 'Number found' : phone)}</span>
+        </div>
+        <button type="button" onClick={onClose} title="Close">×</button>
+      </div>
+      <div className="message-phone-actions">
+        <button type="button" onClick={onChat} disabled={lookup.loading || !lookup.user || openingChat}>
+          {openingChat ? 'Opening...' : 'Chat'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function isPhoneNumber(value) {
+  const normalized = normalizePhone(value);
+  return normalized.replace(/\D/g, '').length >= 6;
+}
+
+function normalizePhone(value) {
+  return String(value || '').trim().replace(/[^\d+]/g, '');
+}
+
 function stringToColor(str = '') {
   let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  const colors = ['#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#be5046', '#d19a66'];
+  for (let i = 0; i < str.length; i += 1) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const colors = ['#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#d19a66'];
   return colors[Math.abs(hash) % colors.length];
 }

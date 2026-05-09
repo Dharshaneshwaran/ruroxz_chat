@@ -186,6 +186,37 @@ const firebaseLogin = async (req, res) => {
 
 const getMe = async (req, res) => res.json(req.user);
 
+const lookupUserByPhone = async (req, res) => {
+  try {
+    const phone = String(req.query.phone || req.body.phoneNumber || '')
+      .trim()
+      .replace(/\s+/g, '');
+
+    if (!phone) return res.status(400).json({ error: 'phone required' });
+
+    const user = await prisma.user.findUnique({
+      where: { phone },
+      select: {
+        id: true,
+        phone: true,
+        email: true,
+        displayName: true,
+        photoUrl: true,
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: 'No user found with this phone number' });
+
+    res.json({
+      user,
+      isSelf: user.id === req.user.id,
+    });
+  } catch (error) {
+    console.error('lookupUserByPhone error:', error);
+    res.status(500).json({ error: 'Failed to lookup user' });
+  }
+};
+
 const updateFcmToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
@@ -220,6 +251,6 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { sendOTP, verifyOTP, emailLogin, firebaseLogin, getMe, updateFcmToken, updateProfile };
+module.exports = { sendOTP, verifyOTP, emailLogin, firebaseLogin, getMe, lookupUserByPhone, updateFcmToken, updateProfile };
 
 

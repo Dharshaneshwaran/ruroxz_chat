@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useChatStore } from './store/chatStore';
@@ -11,8 +11,38 @@ import Chat from './pages/Chat';
 import ChatItem from './components/ChatItem';
 import './styles/bubbles.css';
 
-/* ─── New Conversation Modal ─── */
-/* ─── Settings / Profile Modal ─── */
+function Icon({ name, size = 24 }) {
+  const common = { stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
+  const paths = {
+    chats: <><path {...common} d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /><path {...common} d="M8 9h8M8 13h5" /></>,
+    status: <><path {...common} d="M4 12a8 8 0 0 1 8-8" /><path {...common} d="M20 12a8 8 0 0 1-8 8" /><path {...common} d="M8 4.9a8 8 0 0 1 11.1 7.1" /><path {...common} d="M16 19.1A8 8 0 0 1 4.9 8" /><circle {...common} cx="12" cy="12" r="3" /></>,
+    channels: <><path {...common} d="M7 8a5 5 0 0 1 10 0c0 4-5 8-5 8S7 12 7 8z" /><path {...common} d="M5 19h14" /></>,
+    groups: <><path {...common} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle {...common} cx="9" cy="7" r="4" /><path {...common} d="M22 21v-2a4 4 0 0 0-3-3.87" /><path {...common} d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+    sparkle: <><path {...common} d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /><path {...common} d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></>,
+    newChat: <><path {...common} d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h8" /><path {...common} d="M19 3v6M16 6h6" /></>,
+    dots: <><circle cx="12" cy="5" r="1.8" fill="currentColor" /><circle cx="12" cy="12" r="1.8" fill="currentColor" /><circle cx="12" cy="19" r="1.8" fill="currentColor" /></>,
+    search: <><circle {...common} cx="11" cy="11" r="7" /><path {...common} d="M20 20l-3.5-3.5" /></>,
+    bellOff: <><path {...common} d="M13.7 21a2 2 0 0 1-3.4 0" /><path {...common} d="M18 8a6 6 0 0 0-8.3-5.5" /><path {...common} d="M5.3 5.3A6 6 0 0 0 4 9c0 7-3 7-3 7h15" /><path {...common} d="M2 2l20 20" /></>,
+    close: <><path {...common} d="M18 6L6 18M6 6l12 12" /></>,
+    image: <><rect {...common} x="3" y="3" width="18" height="18" rx="2" /><circle {...common} cx="8.5" cy="8.5" r="1.5" /><path {...common} d="M21 15l-5-5L5 21" /></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
+}
+
+function Modal({ title, children, onClose }) {
+  return (
+    <div className="modal-backdrop">
+      <div className="modal-card">
+        <div className="modal-head">
+          <h3>{title}</h3>
+          <button onClick={onClose} className="icon-btn" title="Close"><Icon name="close" size={22} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function SettingsModal({ onClose }) {
   const { user, setUser } = useAuthStore();
   const [name, setName] = useState(user?.displayName || '');
@@ -22,12 +52,13 @@ function SettingsModal({ onClose }) {
 
   const handleUpdate = async (e) => {
     e.preventDefault();
-    setLoading(true); setMsg({ text: '', type: '' });
+    setLoading(true);
+    setMsg({ text: '', type: '' });
     try {
       const res = await api.put('/auth/profile', { displayName: name, phoneNumber: phone });
       setUser(res.data);
-      setMsg({ text: 'Profile updated successfully!', type: 'success' });
-      setTimeout(onClose, 1500);
+      setMsg({ text: 'Profile updated successfully.', type: 'success' });
+      setTimeout(onClose, 1000);
     } catch (err) {
       setMsg({ text: err.response?.data?.error || 'Failed to update profile', type: 'error' });
     } finally {
@@ -36,30 +67,16 @@ function SettingsModal({ onClose }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
-      <div style={{ background: '#233138', borderRadius: 16, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ color: '#e9edef', fontWeight: 600, fontSize: 18 }}>Profile Settings</h3>
-          <button onClick={onClose} className="icon-btn">✕</button>
-        </div>
-        
-        {msg.text && (
-          <p style={{ color: msg.type === 'error' ? '#ff6b6b' : '#25D366', fontSize: 13, marginBottom: 12 }}>{msg.text}</p>
-        )}
-
-        <form onSubmit={handleUpdate} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <label style={{ color: '#8696a0', fontSize: 13, display: 'block', marginBottom: 6 }}>Display Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your Name" style={mStyle.input} />
-          </div>
-          <div>
-            <label style={{ color: '#8696a0', fontSize: 13, display: 'block', marginBottom: 6 }}>Phone Number</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91XXXXXXXXXX" style={mStyle.input} />
-          </div>
-          <button type="submit" disabled={loading} style={mStyle.btn}>{loading ? 'Saving…' : 'Save Changes'}</button>
-        </form>
-      </div>
-    </div>
+    <Modal title="Profile Settings" onClose={onClose}>
+      {msg.text && <p className={`modal-message ${msg.type}`}>{msg.text}</p>}
+      <form onSubmit={handleUpdate} className="modal-form">
+        <label>Display Name</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+        <label>Phone Number</label>
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91XXXXXXXXXX" />
+        <button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</button>
+      </form>
+    </Modal>
   );
 }
 
@@ -70,122 +87,199 @@ function NewChatModal({ onClose, onCreated }) {
   const [groupName, setGroupName] = useState('');
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupResult, setLookupResult] = useState(null);
   const [err, setErr] = useState('');
+  const normalizedInput = normalizePhone(input);
+  const canLookupPhone = tab === 'direct' && isPhoneLike(input);
+
+  useEffect(() => {
+    setLookupResult(null);
+    setErr('');
+
+    if (!canLookupPhone || normalizedInput.length < 6) {
+      setLookupLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLookupLoading(true);
+      try {
+        const res = await api.get('/auth/lookup-phone', { params: { phone: normalizedInput } });
+        if (!cancelled) {
+          setLookupResult(res.data);
+          setErr('');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLookupResult(null);
+          setErr(error.response?.status === 404 ? 'No account found for this number' : 'Could not check this number');
+        }
+      } finally {
+        if (!cancelled) setLookupLoading(false);
+      }
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [canLookupPhone, normalizedInput, tab]);
 
   const startDirect = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!input.trim()) return;
-    setLoading(true); setErr('');
+    setLoading(true);
+    setErr('');
     try {
-      const res = await api.post('/chats', { participantPhones: [input.trim()], isGroup: false });
+      const contact = canLookupPhone ? normalizedInput : input.trim();
+      const res = await api.post('/chats', { participantPhones: [contact], isGroup: false });
       onCreated(res.data);
-    } catch (e) { setErr(e.response?.data?.error || 'User not found'); }
-    finally { setLoading(false); }
+    } catch (error) {
+      setErr(error.response?.data?.error || 'User not found');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const createGroup = async (e) => {
     e.preventDefault();
-    if (!groupName.trim() || members.length === 0) return setErr('Group name and at least 1 member required');
-    setLoading(true); setErr('');
+    if (!groupName.trim() || members.length === 0) {
+      setErr('Group name and at least one member are required');
+      return;
+    }
+    setLoading(true);
+    setErr('');
     try {
       const res = await api.post('/chats', { participantPhones: members, chatName: groupName.trim(), isGroup: true });
       onCreated(res.data);
-    } catch (e) { setErr(e.response?.data?.error || 'Failed'); }
-    finally { setLoading(false); }
+    } catch (error) {
+      setErr(error.response?.data?.error || 'Failed to create group');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const messageSelf = async () => {
     if (!user) return;
-    setLoading(true); setErr('');
+    setLoading(true);
+    setErr('');
     try {
       const res = await api.post('/chats', { participantIds: [user.id], isGroup: false });
       onCreated(res.data);
-    } catch (e) { setErr(e.response?.data?.error || 'Failed to start self chat'); }
-    finally { setLoading(false); }
+    } catch (error) {
+      setErr(error.response?.data?.error || 'Failed to start self chat');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const addMember = () => {
-    if (input.trim() && !members.includes(input.trim())) {
-      setMembers((m) => [...m, input.trim()]); setInput('');
+    const next = input.trim();
+    if (next && !members.includes(next)) {
+      setMembers((current) => [...current, next]);
+      setInput('');
     }
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
-      <div style={{ background: '#233138', borderRadius: 16, padding: 28, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ color: '#e9edef', fontWeight: 600, fontSize: 18 }}>New Conversation</h3>
-          <button onClick={onClose} className="icon-btn">✕</button>
-        </div>
-        <div style={{ display: 'flex', marginBottom: 20, background: '#2a3942', borderRadius: 10, padding: 4 }}>
-          {['direct', 'group'].map((t) => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              flex: 1, padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              background: tab === t ? '#25D366' : 'transparent',
-              color: tab === t ? '#fff' : '#8696a0', fontWeight: 600, fontSize: 13, transition: 'all 0.2s', boxShadow: tab === t ? '0 0 15px rgba(37, 211, 102, 0.8)' : 'none',
-            }}>
-              {t === 'direct' ? '👤 Direct Chat' : '👥 New Group'}
-            </button>
-          ))}
-        </div>
-        {err && <p style={{ color: '#ff6b6b', fontSize: 13, marginBottom: 12 }}>{err}</p>}
-        {tab === 'direct' ? (
-          <form onSubmit={startDirect} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input value={input} onChange={(e) => setInput(e.target.value)} autoFocus
-              placeholder="Email, phone number, or user id" style={mStyle.input} />
-            <button type="submit" disabled={loading} style={mStyle.btn}>{loading ? 'Starting…' : 'Start Chat'}</button>
-            <button type="button" onClick={messageSelf} disabled={loading || !user} style={{ ...mStyle.btn, background: '#1b7f5c' }}>
-              {loading ? 'Starting…' : 'Message myself'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={createGroup} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input value={groupName} onChange={(e) => setGroupName(e.target.value)} autoFocus
-              placeholder="Group name" style={mStyle.input} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input value={input} onChange={(e) => setInput(e.target.value)}
-                placeholder="Add member (email or phone)"
-                style={{ ...mStyle.input, flex: 1, marginBottom: 0 }}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addMember())} />
-              <button type="button" onClick={addMember} style={{ ...mStyle.btn, padding: '0 16px', width: 'auto' }}>+</button>
+    <Modal title="New Conversation" onClose={onClose}>
+      <div className="modal-tabs">
+        <button className={tab === 'direct' ? 'active' : ''} onClick={() => setTab('direct')}>Direct Chat</button>
+        <button className={tab === 'group' ? 'active' : ''} onClick={() => setTab('group')}>New Group</button>
+      </div>
+      {err && <p className="modal-message error">{err}</p>}
+      {tab === 'direct' ? (
+        <form onSubmit={startDirect} className="modal-form">
+          <input value={input} onChange={(e) => setInput(e.target.value)} autoFocus placeholder="Email, phone number, or user id" />
+          {canLookupPhone && (
+            <ContactLookupCard
+              lookupLoading={lookupLoading}
+              lookupResult={lookupResult}
+              phone={normalizedInput}
+              onChat={() => startDirect()}
+              chatLoading={loading}
+            />
+          )}
+          {!lookupResult && <button type="submit" disabled={loading || lookupLoading}>{loading ? 'Starting...' : lookupLoading ? 'Checking...' : 'Start Chat'}</button>}
+          <button type="button" onClick={messageSelf} disabled={loading || !user} className="secondary">Message myself</button>
+        </form>
+      ) : (
+        <form onSubmit={createGroup} className="modal-form">
+          <input value={groupName} onChange={(e) => setGroupName(e.target.value)} autoFocus placeholder="Group name" />
+          <div className="modal-row">
+            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Add member email or phone" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addMember())} />
+            <button type="button" onClick={addMember}>+</button>
+          </div>
+          {members.length > 0 && (
+            <div className="member-chips">
+              {members.map((member) => (
+                <span key={member}>
+                  {member}
+                  <button type="button" onClick={() => setMembers(members.filter((item) => item !== member))}>x</button>
+                </span>
+              ))}
             </div>
-            {members.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {members.map((m) => (
-                  <span key={m} style={{ background: '#2a3942', color: '#e9edef', padding: '3px 10px', borderRadius: 20, fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {m}
-                    <span style={{ cursor: 'pointer', color: '#8696a0' }} onClick={() => setMembers(members.filter((x) => x !== m))}>✕</span>
-                  </span>
-                ))}
-              </div>
-            )}
-            <button type="submit" disabled={loading} style={mStyle.btn}>{loading ? 'Creating…' : 'Create Group'}</button>
-          </form>
-        )}
+          )}
+          <button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create Group'}</button>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
+function ContactLookupCard({ lookupLoading, lookupResult, phone, onChat, chatLoading }) {
+  if (lookupLoading) {
+    return <div className="contact-lookup-card muted">Checking database...</div>;
+  }
+
+  if (!lookupResult?.user) return null;
+
+  const contact = lookupResult.user;
+  const name = contact.displayName || contact.phone || contact.email || 'Contact';
+
+  return (
+    <div className="contact-lookup-card">
+      <div className="contact-lookup-main">
+        <div className="wa-avatar small">{name.charAt(0).toUpperCase()}</div>
+        <div>
+          <strong>{name}</strong>
+          <span>{lookupResult.isSelf ? 'This is your account' : contact.phone}</span>
+        </div>
+      </div>
+      <div className="contact-actions">
+        <button type="button" onClick={onChat} disabled={chatLoading}>
+          {chatLoading ? 'Opening...' : 'Chat'}
+        </button>
       </div>
     </div>
   );
 }
 
-const mStyle = {
-  input: { padding: '10px 14px', background: '#2a3942', border: '1px solid #3b4a54', borderRadius: 8, color: '#e9edef', fontSize: 14, outline: 'none', width: '100%' },
-  btn: { background: '#25D366', color: '#fff', border: 'none', padding: 12, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', boxShadow: '0 0 15px rgba(37, 211, 102, 0.6)' },
-};
+function normalizePhone(value) {
+  return String(value || '').trim().replace(/[^\d+]/g, '');
+}
 
-/* ─── Chat Layout ─── */
+function isPhoneLike(value) {
+  const next = String(value || '').trim();
+  return next.length > 0 && !next.includes('@') && /^[+\d\s().-]+$/.test(next);
+}
+
 function ChatLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { chats, setChats, addChat, reset } = useChatStore();
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
   const [modal, setModal] = useState(false);
   const [settingsModal, setSettingsModal] = useState(false);
+  const [noticeVisible, setNoticeVisible] = useState(true);
   const navigate = useNavigate();
   const { chatId: activeChatId } = useParams();
 
-  // Single socket manager — no listeners in Chat.jsx
-  const chatIds = chats.map((c) => c.id);
+  const chatIds = chats.map((chat) => chat.id);
   useSocket(chatIds);
 
   useEffect(() => {
@@ -198,8 +292,11 @@ function ChatLayout() {
     try {
       const res = await api.get('/chats');
       setChats(res.data);
-    } catch (err) { console.error('fetchChats:', err); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error('fetchChats:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChatCreated = (chat) => {
@@ -211,12 +308,8 @@ function ChatLayout() {
   const handleDeleteChat = async (chatId) => {
     try {
       await api.delete(`/chats/${chatId}`);
-      // Remove chat from local state
-      setChats(chats.filter(c => c.id !== chatId));
-      // Navigate away if we're in the deleted chat
-      if (activeChatId === chatId) {
-        navigate('/');
-      }
+      setChats(chats.filter((chat) => chat.id !== chatId));
+      if (activeChatId === chatId) navigate('/');
     } catch (err) {
       console.error('handleDeleteChat:', err);
       alert('Failed to delete chat');
@@ -228,110 +321,126 @@ function ChatLayout() {
     logout();
   };
 
-  const filtered = chats.filter((c) => {
-    const other = c.participants?.find((p) => p.userId !== user?.id);
-    const name = c.isGroup ? c.name : (other?.user?.displayName || other?.user?.email || other?.user?.phone || '');
-    return name?.toLowerCase().includes(search.toLowerCase());
-  });
-
+  const unreadCount = useMemo(() => chats.filter((chat) => chat.messages?.[0] && chat.messages[0].senderId !== user?.id).length, [chats, user?.id]);
   const displayName = user?.displayName || user?.email || user?.phone || 'Me';
 
+  const filtered = chats.filter((chat) => {
+    const other = chat.participants?.find((p) => p.userId !== user?.id);
+    const name = chat.isGroup ? chat.name : (other?.user?.displayName || other?.user?.email || other?.user?.phone || '');
+    const matchesSearch = name?.toLowerCase().includes(search.toLowerCase());
+    if (!matchesSearch) return false;
+    if (filter === 'groups') return chat.isGroup;
+    if (filter === 'unread') return chat.messages?.[0] && chat.messages[0].senderId !== user?.id;
+    if (filter === 'favorites') return Boolean(chat.isFavorite || chat.favorite);
+    return true;
+  });
+
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%' }}>
-      {/* ══════ SIDEBAR ══════ */}
-      <div style={{ width: 420, maxWidth: '35%', display: 'flex', flexDirection: 'column', background: '#111b21', borderRight: '1px solid #222e35', flexShrink: 0 }}>
+    <div className="wa-shell">
+      <aside className="wa-rail">
+        <div className="rail-top">
+          <RailButton active badge={unreadCount || null} title="Chats"><Icon name="chats" /></RailButton>
+          <RailButton title="Status"><Icon name="status" /></RailButton>
+          <RailButton title="Channels"><Icon name="channels" /></RailButton>
+          <RailButton title="Communities"><Icon name="groups" /></RailButton>
+          <div className="rail-separator" />
+          <RailButton title="AI"><Icon name="sparkle" /></RailButton>
+        </div>
+        <div className="rail-bottom">
+          <RailButton title="Archived"><Icon name="image" /></RailButton>
+          <button className="rail-avatar" onClick={() => setSettingsModal(true)} title="Profile settings">{displayName.charAt(0).toUpperCase()}</button>
+        </div>
+      </aside>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '10px 16px', background: '#202c33', gap: 10, minHeight: 60 }}>
-          <div style={{ ...avatarStyle(40, '#25D366'), cursor: 'pointer' }} onClick={() => setSettingsModal(true)} title="Profile settings">
-            {displayName.charAt(0).toUpperCase()}
+      <aside className="wa-sidebar">
+        <header className="sidebar-titlebar">
+          <h1>WhatsApp</h1>
+          <div>
+            <button className="icon-btn" onClick={() => setModal(true)} title="New chat"><Icon name="newChat" size={22} /></button>
+            <button className="icon-btn" onClick={handleLogout} title="Log out"><Icon name="dots" size={22} /></button>
           </div>
-          <div style={{ flex: 1 }} />
-          <button className="icon-btn" onClick={() => setModal(true)} title="New chat">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="#aebac1">
-              <path d="M19.005 3.175H4.674C3.642 3.175 3 3.789 3 4.821V21.02l3.544-3.514h12.461c1.033 0 2.064-1.06 2.064-2.093V4.821c-.001-1.032-1.032-1.646-2.064-1.646zm-4.989 9.869H7.041V11.1h6.975v1.944zm3-4H7.041V7.1h10.975v1.944z" />
-            </svg>
-          </button>
-          <button className="icon-btn" onClick={handleLogout} title="Log out">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="#aebac1">
-              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-            </svg>
-          </button>
+        </header>
+
+        <div className="search-wrap">
+          <Icon name="search" size={21} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search or start a new chat" />
         </div>
 
-        {/* Search */}
-        <div style={{ padding: '8px 12px', background: '#111b21' }}>
-          <div style={{ display: 'flex', alignItems: 'center', background: '#202c33', borderRadius: 8, padding: '7px 14px', gap: 10 }}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="#8696a0">
-              <path d="M15.009 13.805h-.636l-.22-.219a5.184 5.184 0 0 0 1.256-3.386 5.207 5.207 0 1 0-5.207 5.208 5.185 5.185 0 0 0 3.385-1.255l.221.22v.635l4.004 3.999 1.194-1.195-3.997-4.007zm-4.808 0a3.605 3.605 0 1 1 0-7.21 3.605 3.605 0 0 1 0 7.21z" />
-            </svg>
-            <input className="search-input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search or start new chat" />
-          </div>
+        <div className="filter-row">
+          <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</button>
+          <button className={filter === 'unread' ? 'active' : ''} onClick={() => setFilter('unread')}>Unread {unreadCount || ''}</button>
+          <button className={filter === 'favorites' ? 'active' : ''} onClick={() => setFilter('favorites')}>Favorites</button>
+          <button className={filter === 'groups' ? 'active' : ''} onClick={() => setFilter('groups')}>Groups</button>
+          <button className="round" onClick={() => setModal(true)} title="New chat">+</button>
         </div>
 
-        {/* Chat list */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        {noticeVisible && (
+          <div className="notification-card">
+            <Icon name="bellOff" size={34} />
+            <div><strong>Message notifications are off.</strong> <button onClick={requestNotificationPermission}>Turn on</button></div>
+            <button className="notif-close" title="Dismiss" onClick={() => setNoticeVisible(false)}><Icon name="close" size={24} /></button>
+          </div>
+        )}
+
+        <div className="chat-list">
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
-              <div style={{ width: 30, height: 30, border: '3px solid #2a3942', borderTop: '3px solid #25D366', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            </div>
+            <div className="spinner-wrap"><div className="spinner" /></div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-              <div style={{ fontSize: 56, marginBottom: 16 }}>💬</div>
-              <p style={{ color: '#8696a0', fontSize: 14, marginBottom: 16 }}>No chats yet</p>
-              <button onClick={() => setModal(true)} style={{ ...mStyle.btn, padding: '8px 20px', fontSize: 13 }}>Start a conversation</button>
+            <div className="empty-list">
+              <Icon name="chats" size={52} />
+              <p>No chats found</p>
+              <button onClick={() => setModal(true)}>Start a conversation</button>
             </div>
           ) : (
             filtered.map((chat) => (
-              <ChatItem key={chat.id} chat={chat} currentUserId={user?.id}
+              <ChatItem
+                key={chat.id}
+                chat={chat}
+                currentUserId={user?.id}
                 active={chat.id === activeChatId}
                 onClick={() => navigate(`/chat/${chat.id}`)}
-                onDelete={handleDeleteChat} />
+                onDelete={handleDeleteChat}
+              />
             ))
           )}
         </div>
-      </div>
 
-      {/* ══════ MAIN AREA ══════ */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <button className="windows-cta">Get WhatsApp for Windows</button>
+      </aside>
+
+      <main className="wa-main">
         <Routes>
           <Route path="/chat/:chatId" element={<Chat />} />
           <Route path="*" element={<WelcomePane onNewChat={() => setModal(true)} />} />
         </Routes>
-      </div>
+      </main>
 
       {modal && <NewChatModal onClose={() => setModal(false)} onCreated={handleChatCreated} />}
       {settingsModal && <SettingsModal onClose={() => setSettingsModal(false)} />}
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+  );
+}
+
+function RailButton({ children, title, active, badge }) {
+  return (
+    <button className={`rail-btn ${active ? 'active' : ''}`} title={title}>
+      {children}
+      {badge ? <span>{badge}</span> : null}
+    </button>
   );
 }
 
 function WelcomePane({ onNewChat }) {
   return (
-    <div style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#222e35', gap: 20 }}>
-      <svg viewBox="0 0 303 172" width="288" height="163" fill="none">
-        <path d="M229.565 160.229c32.647-10.984 55.985-41.6 55.985-77.329C285.55 36.788 248.354 0 202.688 0c-45.666 0-82.862 36.788-82.862 82.9 0 14.9 4 28.894 11.007 40.944L110 160l31.024-3.607a83.377 83.377 0 0 0 41.391 11.507h.273c4.192 0 8.327-.3 12.392-.878" fill="#202c33"/>
-        <path d="M128.565 134.557c-8.952-15.586-14.1-33.709-14.1-53.05C114.465 36.266 151.663 0 197.327 0c28.27 0 53.24 13.818 68.546 35.046a82.11 82.11 0 0 0-19.77-2.437c-45.666 0-82.862 36.788-82.862 82.9 0 19.14 6.535 36.74 17.374 50.73L158 175l-29.435-40.443z" fill="#2a3942"/>
-        <circle cx="197" cy="82" r="25" fill="#25D366" opacity=".3"/>
-        <circle cx="197" cy="82" r="15" fill="#25D366"/>
-        <path d="M191 82l4 4 8-8" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-      <div style={{ textAlign: 'center' }}>
-        <h2 style={{ color: '#e9edef', fontWeight: 300, fontSize: 30, marginBottom: 12 }}>WhatApp Clone</h2>
-        <p style={{ color: '#8696a0', fontSize: 14, lineHeight: 1.6, maxWidth: 400 }}>
-          Send and receive messages instantly.<br />Your messages are end-to-end encrypted.
-        </p>
-      </div>
-      <button onClick={onNewChat} style={{ ...mStyle.btn, padding: '10px 28px', borderRadius: 24, fontSize: 14 }}>
-        ✏️  Start a new conversation
-      </button>
-    </div>
+    <section className="welcome-pane">
+      <div className="welcome-mark">WA</div>
+      <h2>WhatsApp Web</h2>
+      <p>Send and receive messages instantly from this browser.</p>
+      <button onClick={onNewChat}>Start a new conversation</button>
+    </section>
   );
 }
 
-/* ─── Root with auth persistence ─── */
 export default function App() {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
@@ -339,37 +448,31 @@ export default function App() {
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    if (!token) { setBooting(false); return; }
-    import('./services/api').then(({ default: api }) => {
-      api.get('/auth/me')
+    if (!token) {
+      setBooting(false);
+      return;
+    }
+    import('./services/api').then(({ default: apiClient }) => {
+      apiClient.get('/auth/me')
         .then((res) => setUser(res.data))
         .catch(() => localStorage.removeItem('authToken'))
         .finally(() => setBooting(false));
     });
-  }, []);
+  }, [setUser]);
 
-  if (booting) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#111b21' }}>
-      <div style={{ width: 40, height: 40, border: '3px solid #2a3942', borderTop: '3px solid #25D366', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
+  if (booting) {
+    return (
+      <div className="boot-screen">
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
       <Routes>
-        {!user ? (
-          <Route path="/*" element={<Login />} />
-        ) : (
-          <Route path="/*" element={<ChatLayout />} />
-        )}
+        {!user ? <Route path="/*" element={<Login />} /> : <Route path="/*" element={<ChatLayout />} />}
       </Routes>
     </BrowserRouter>
   );
 }
-
-const avatarStyle = (size, bg) => ({
-  width: size, height: size, borderRadius: '50%', background: bg,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  color: '#fff', fontWeight: 700, fontSize: size * 0.4, flexShrink: 0,
-});
