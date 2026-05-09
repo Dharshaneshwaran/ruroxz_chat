@@ -50,16 +50,23 @@ export default function Chat() {
     }
   };
 
-  const handleSend = useCallback(async ({ content, file }) => {
+  // Called by ChatInput after user confirms the preview
+  const handleSendFile = useCallback(async (file, caption, onProgress) => {
+    const fd = new FormData();
+    fd.append('media', file);
+    if (caption) fd.append('content', caption);
+    const res = await api.post(`/chats/${chatId}/messages`, fd, {
+      onUploadProgress: (e) => {
+        if (e.total) onProgress(Math.round((e.loaded * 100) / e.total));
+      },
+    });
+    addMessage(chatId, res.data);
+    updateChatLastMessage(chatId, res.data);
+  }, [chatId, addMessage, updateChatLastMessage]);
+
+  const handleSend = useCallback(async ({ content }) => {
     try {
-      if (file) {
-        const fd = new FormData();
-        fd.append('media', file);
-        if (content) fd.append('content', content);
-        const res = await api.post(`/chats/${chatId}/messages`, fd);
-        addMessage(chatId, res.data);
-        updateChatLastMessage(chatId, res.data);
-      } else if (content?.trim()) {
+      if (content?.trim()) {
         const optimistic = {
           id: `temp-${Date.now()}`,
           chatId,
@@ -140,7 +147,7 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <ChatInput chatId={chatId} userId={user?.id} onSend={handleSend} />
+      <ChatInput chatId={chatId} userId={user?.id} onSend={handleSend} onSendFile={handleSendFile} />
     </div>
   );
 }
