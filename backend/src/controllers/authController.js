@@ -25,7 +25,7 @@ const sendEmailOTP = async (email, otp) => {
         name: process.env.BREVO_SENDER_NAME || 'WhatApp Clone',
         email: process.env.BREVO_SENDER_EMAIL,
       },
-      to: [{ email }],
+      to: [{ email: email, name: email }],
       subject: 'Your WhatApp Clone OTP',
       htmlContent: `
         <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;border:1px solid #eee;border-radius:12px">
@@ -93,10 +93,14 @@ const verifyOTP = async (req, res) => {
       : await prisma.user.findUnique({ where: { phone: identifier } });
 
     if (!user) {
+      // When signing up via email, phoneNumber is the extra phone field from the form.
+      // When signing up via phone, email is not used here.
+      const extraPhone = email && phoneNumber ? phoneNumber : null;
       user = await prisma.user.create({
         data: {
           ...(email && { email: identifier }),
-          ...(phoneNumber && { phone: identifier }),
+          ...(!email && phoneNumber && { phone: identifier }),
+          ...(extraPhone && { phone: extraPhone }),
           displayName: displayName || email || phoneNumber,
           fcmToken,
         },
@@ -186,6 +190,37 @@ const firebaseLogin = async (req, res) => {
 
 const getMe = async (req, res) => res.json(req.user);
 
+const lookupUserByPhone = async (req, res) => {
+  try {
+    const phone = String(req.query.phone || req.body.phoneNumber || '')
+      .trim()
+      .replace(/\s+/g, '');
+
+    if (!phone) return res.status(400).json({ error: 'phone required' });
+
+    const user = await prisma.user.findUnique({
+      where: { phone },
+      select: {
+        id: true,
+        phone: true,
+        email: true,
+        displayName: true,
+        photoUrl: true,
+      },
+    });
+
+    if (!user) return res.status(404).json({ error: 'No user found with this phone number' });
+
+    res.json({
+      user,
+      isSelf: user.id === req.user.id,
+    });
+  } catch (error) {
+    console.error('lookupUserByPhone error:', error);
+    res.status(500).json({ error: 'Failed to lookup user' });
+  }
+};
+
 const updateFcmToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
@@ -198,12 +233,22 @@ const updateFcmToken = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { displayName, phoneNumber } = req.body;
+    const { displayName, phoneNumber, about } = req.body;
     const userId = req.user.id;
 
     const data = {};
-    if (displayName !== undefined) data.displayName = displayName;
-    if (phoneNumber !== undefined) data.phone = phoneNumber.trim().replace(/\s+/g, '');
+    if (displayName !== undefined && displayName !== null) data.displayName = String(displayName).trim();
+    if (about !== undefined && about !== null) data.about = String(about).trim();
+    if (phoneNumber !== undefined && phoneNumber !== null) {
+      const cleaned = String(phoneNumber).trim().replace(/\s+/g, '');
+      if (cleaned) data.phone = cleaned;
+    }
+
+    console.log(`[updateProfile] userId=${userId} data=`, data);
+
+    if (Object.keys(data).length === 0) {
+      return res.json(req.user); // nothing to update
+    }
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -220,6 +265,6 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = { sendOTP, verifyOTP, emailLogin, firebaseLogin, getMe, updateFcmToken, updateProfile };
+module.exports = { sendOTP, verifyOTP, emailLogin, firebaseLogin, getMe, lookupUserByPhone, updateFcmToken, updateProfile };
 
 

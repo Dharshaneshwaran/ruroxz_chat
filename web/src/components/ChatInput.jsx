@@ -9,6 +9,7 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [isSnap, setIsSnap] = useState(false);
 
   // Preview state
   const [previewFile, setPreviewFile] = useState(null);   // File object
@@ -17,7 +18,6 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
   const [uploading, setUploading] = useState(false);
   const [uploadPct, setUploadPct] = useState(0);
   const [uploadError, setUploadError] = useState('');
-
   const fileRef = useRef(null);
   const textRef = useRef(null);
   const emojiRef = useRef(null);
@@ -53,15 +53,16 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
     setText(e.target.value);
     const el = e.target;
     el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
     emitTyping();
   };
 
   const send = () => {
     const content = text.trim();
     if (!content) return;
-    onSend({ content });
+    onSend({ content, isSnap });
     setText('');
+    setIsSnap(false);
     if (textRef.current) textRef.current.style.height = 'auto';
     clearTimeout(typingTimer);
     socket.emit('stop_typing', { chatId, userId });
@@ -107,8 +108,9 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
     setUploadError('');
     setUploadPct(0);
     try {
-      await onSendFile(previewFile, caption.trim(), (pct) => setUploadPct(pct));
+      await onSendFile(previewFile, caption.trim(), (pct) => setUploadPct(pct), isSnap);
       closePreview();
+      setIsSnap(false);
     } catch (err) {
       const msg = err?.response?.data?.error || 'Upload failed. Please try again.';
       setUploadError(msg);
@@ -139,6 +141,7 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
   const hasText = text.trim().length > 0;
 
   return (
+<<<<<<< HEAD
     <>
       {/* ── File Preview Modal ── */}
       {previewFile && (
@@ -268,6 +271,40 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
         </div>
       )}
 
+      {/* Snap toggle bar */}
+      <div style={{
+        padding: '8px 16px',
+        background: isSnap ? 'rgba(37, 211, 102, 0.1)' : '#111b21',
+        borderTop: '1px solid #222e35',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        transition: 'all 0.2s'
+      }}>
+        <button
+          onClick={() => setIsSnap(!isSnap)}
+          style={{
+            background: isSnap ? '#25D366' : 'transparent',
+            border: isSnap ? 'none' : '1px solid #3b4a54',
+            borderRadius: 20,
+            padding: '4px 12px',
+            color: isSnap ? '#fff' : '#8696a0',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+        >
+          <SnapIcon />
+          {isSnap ? 'Snap ON' : 'Snap'}
+        </button>
+        <span style={{ color: '#8696a0', fontSize: 11 }}>
+          {isSnap ? 'Messages will vanish after 24 hours' : 'Send a disappearing message'}
+        </span>
+      </div>
+
       {/* ── Input Bar ── */}
       <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 8, padding: '10px 16px', background: '#202c33', flexShrink: 0 }}>
 
@@ -309,7 +346,7 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
             value={text}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message"
+            placeholder={isSnap ? 'Post a 24-hour snap' : 'Type a message'}
             rows={1}
           />
         </div>
@@ -335,5 +372,49 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function SmileIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+    </svg>
+  );
+}
+
+function SendIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="25" height="25" fill="currentColor">
+      <path d="M2.3 20.7 22 12 2.3 3.3 2.4 10l12.2 2-12.2 2 .1 6.7z" />
+    </svg>
+  );
+}
+
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z" />
+      <path d="M19 11a7 7 0 0 1-14 0M12 18v3" />
+    </svg>
+  );
+}
+
+function SnapIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M18 5l2-2M20 3v5h-5" />
+    </svg>
   );
 }

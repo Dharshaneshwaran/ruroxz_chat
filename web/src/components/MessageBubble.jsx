@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { useChatStore } from '../store/chatStore';
 import '../styles/bubbles.css';
+
+const PHONE_RE = /(\+?\d[\d\s().-]{5,}\d)/g;
 
 /* ── Full-screen media lightbox ── */
 function MediaLightbox({ url, type, name, onClose }) {
@@ -105,6 +110,12 @@ function MediaLightbox({ url, type, name, onClose }) {
 export default function MessageBubble({ message, isOwn, participants, onDelete }) {
   const [showDelete, setShowDelete] = useState(false);
   const [lightbox, setLightbox] = useState(false);
+  const [selectedPhone, setSelectedPhone] = useState('');
+  const [lookup, setLookup] = useState({ loading: false, user: null, error: '' });
+  const [openingChat, setOpeningChat] = useState(false);
+
+  const addChat = useChatStore((s) => s.addChat);
+  const navigate = useNavigate();
 
   const time = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const sender = message.sender || participants?.find((p) => p.userId === message.senderId)?.user;
@@ -115,8 +126,42 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
     if (onDelete && window.confirm('Delete this message?')) onDelete(message.id);
   };
 
+  const handlePhoneClick = async (rawPhone) => {
+    const phone = normalizePhone(rawPhone);
+    setSelectedPhone(phone);
+    setLookup({ loading: true, user: null, error: '' });
+    try {
+      const res = await api.get('/auth/lookup-phone', { params: { phone } });
+      setLookup({ loading: false, user: res.data.user, error: '' });
+    } catch (error) {
+      setLookup({
+        loading: false,
+        user: null,
+        error: error.response?.status === 404 ? 'No account found for this number' : 'Could not check this number',
+      });
+    }
+  };
+
+  const openChat = async () => {
+    if (!selectedPhone) return;
+    setOpeningChat(true);
+    try {
+      const res = await api.post('/chats', { participantPhones: [selectedPhone], isGroup: false });
+      addChat(res.data);
+      navigate(`/chat/${res.data.id}`);
+      setSelectedPhone('');
+    } catch (error) {
+      setLookup((current) => ({
+        ...current,
+        error: error.response?.data?.error || 'Could not open chat for this number',
+      }));
+    } finally {
+      setOpeningChat(false);
+    }
+  };
+
   const hasMedia = !!message.mediaUrl;
-  const mediaType = message.mediaType; // 'image' | 'video' | 'application' | etc.
+  const mediaType = message.mediaType;
 
   return (
     <>
@@ -168,6 +213,14 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
             </div>
           )}
 
+          {/* Snap indicator */}
+          {message.isSnap && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#f78da7', fontSize: 11, marginBottom: 4, padding: hasMedia ? '0 6px' : 0 }}>
+              <SnapMiniIcon />
+              <span>Snap · 24h</span>
+            </div>
+          )}
+
           {/* Image */}
           {hasMedia && mediaType === 'image' && (
             <div
@@ -179,22 +232,6 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
                 alt="media"
                 style={{ display: 'block', maxWidth: 280, maxHeight: 220, width: '100%', objectFit: 'cover', borderRadius: 6 }}
               />
-              {/* Hover overlay hint */}
-              <div style={{
-                position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', borderRadius: 6,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'background 0.15s',
-              }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.25)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0)'}
-              >
-                <svg viewBox="0 0 24 24" width="32" height="32" fill="rgba(255,255,255,0.85)" style={{ opacity: 0, transition: 'opacity 0.15s' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = 0; }}
-                >
-                  <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                </svg>
-              </div>
             </div>
           )}
 
@@ -208,18 +245,9 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
                 src={message.mediaUrl}
                 style={{ display: 'block', maxWidth: 280, maxHeight: 180, width: '100%', objectFit: 'cover', borderRadius: 6 }}
               />
-              {/* Play overlay */}
-              <div style={{
-                position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(0,0,0,0.35)',
-              }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.9)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="#111">
-                    <path d="M8 5v14l11-7z"/>
-                  </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="#111"><path d="M8 5v14l11-7z"/></svg>
                 </div>
               </div>
             </div>
@@ -238,19 +266,27 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
               <span style={{ fontSize: 26 }}>📄</span>
               <div>
                 <div style={{ color: '#53bdeb', fontSize: 13, fontWeight: 500 }}>View file</div>
-                <div style={{ color: '#8696a0', fontSize: 11 }}>Tap to preview or download</div>
+                <div style={{ color: '#8696a0', fontSize: 11 }}>Tap to preview</div>
               </div>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="#8696a0" style={{ marginLeft: 'auto' }}>
-                <path d="M9 18l6-6-6-6"/>
-              </svg>
             </div>
           )}
 
           {/* Text content */}
           {message.content && (
             <div style={{ color: '#e9edef', fontSize: 14.5, lineHeight: 1.45, wordBreak: 'break-word', whiteSpace: 'pre-wrap', padding: hasMedia ? '0 6px' : 0 }}>
-              {message.content}
+              <PhoneAwareText text={message.content} onPhoneClick={handlePhoneClick} />
             </div>
+          )}
+
+          {/* Phone lookup card */}
+          {selectedPhone && (
+            <PhoneActionCard
+              phone={selectedPhone}
+              lookup={lookup}
+              openingChat={openingChat}
+              onChat={openChat}
+              onClose={() => setSelectedPhone('')}
+            />
           )}
 
           {/* Timestamp */}
@@ -264,9 +300,90 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
   );
 }
 
+function SnapMiniIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12s3.4-5.5 9-5.5 9 5.5 9 5.5-3.4 5.5-9 5.5S3 12 3 12z" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M18 4l2-2M20 2v5h-5" />
+    </svg>
+  );
+}
+
+function PhoneAwareText({ text, onPhoneClick }) {
+  const parts = String(text).split(PHONE_RE);
+
+  return parts.map((part, index) => {
+    if (!part) return null;
+    if (isPhoneNumber(part)) {
+      return (
+        <button
+          key={`${part}-${index}`}
+          type="button"
+          style={{
+            background: 'none', border: 'none', color: '#53bdeb',
+            textDecoration: 'underline', cursor: 'pointer', padding: 0,
+            fontSize: 'inherit', fontStyle: 'inherit', fontWeight: 'inherit',
+          }}
+          onClick={() => onPhoneClick(part)}
+        >
+          {part}
+        </button>
+      );
+    }
+    return <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>;
+  });
+}
+
+function PhoneActionCard({ phone, lookup, openingChat, onChat, onClose }) {
+  const name = lookup.user?.displayName || lookup.user?.phone || lookup.user?.email || phone;
+
+  return (
+    <div style={{
+      background: '#111b21', border: '1px solid #3b4a54', borderRadius: 8,
+      padding: 12, marginTop: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+        <div>
+          <div style={{ color: '#e9edef', fontWeight: 600, fontSize: 13 }}>
+            {lookup.loading ? 'Checking database...' : name}
+          </div>
+          <div style={{ color: '#8696a0', fontSize: 11 }}>
+            {lookup.error || (lookup.user ? 'Number found' : phone)}
+          </div>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8696a0', cursor: 'pointer', fontSize: 18 }}>×</button>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={onChat}
+          disabled={lookup.loading || !lookup.user || openingChat}
+          style={{
+            flex: 1, padding: '6px 0', borderRadius: 4, border: 'none',
+            background: '#25D366', color: '#fff', fontSize: 12, fontWeight: 600,
+            cursor: (lookup.loading || !lookup.user || openingChat) ? 'not-allowed' : 'pointer',
+            opacity: (lookup.loading || !lookup.user || openingChat) ? 0.6 : 1,
+          }}
+        >
+          {openingChat ? 'Opening...' : 'Chat'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function isPhoneNumber(value) {
+  const normalized = normalizePhone(value);
+  return normalized.replace(/\D/g, '').length >= 6;
+}
+
+function normalizePhone(value) {
+  return String(value || '').trim().replace(/[^\d+]/g, '');
+}
+
 function stringToColor(str = '') {
   let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  const colors = ['#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#be5046', '#d19a66'];
+  for (let i = 0; i < str.length; i += 1) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const colors = ['#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#d19a66'];
   return colors[Math.abs(hash) % colors.length];
 }
