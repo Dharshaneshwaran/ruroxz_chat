@@ -75,6 +75,13 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
           </div>
         )}
 
+        {message.isSnap && (
+          <div className="snap-chip">
+            <SnapMiniIcon />
+            <span>Snap · 24h</span>
+          </div>
+        )}
+
         {message.mediaUrl && message.mediaType === 'image' && (
           <img
             src={message.mediaUrl}
@@ -113,6 +120,16 @@ export default function MessageBubble({ message, isOwn, participants, onDelete }
         </div>
       </div>
     </div>
+  );
+}
+
+function SnapMiniIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12s3.4-5.5 9-5.5 9 5.5 9 5.5-3.4 5.5-9 5.5S3 12 3 12z" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M18 4l2-2M20 2v5h-5" />
+    </svg>
   );
 }
 

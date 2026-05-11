@@ -1,5 +1,12 @@
 const prisma = require('../config/db');
 
+const activeMessageWhere = () => ({
+  OR: [
+    { expiresAt: null },
+    { expiresAt: { gt: new Date() } },
+  ],
+});
+
 const getChats = async (req, res) => {
   try {
     const chats = await prisma.chat.findMany({
@@ -7,6 +14,7 @@ const getChats = async (req, res) => {
       include: {
         participants: { include: { user: true } },
         messages: {
+          where: activeMessageWhere(),
           orderBy: { createdAt: 'desc' },
           take: 1,
           include: { sender: true },
@@ -61,7 +69,7 @@ const createChat = async (req, res) => {
           },
           include: {
             participants: { include: { user: true } },
-            messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
+            messages: { where: activeMessageWhere(), orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
           },
         });
         if (existing) return res.json(existing);
@@ -75,7 +83,7 @@ const createChat = async (req, res) => {
           },
           include: {
             participants: { include: { user: true } },
-            messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
+            messages: { where: activeMessageWhere(), orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
           },
         });
         if (existing && existing.participants.length === 2) return res.json(existing);
@@ -95,7 +103,7 @@ const createChat = async (req, res) => {
       },
       include: {
         participants: { include: { user: true } },
-        messages: { orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
+        messages: { where: activeMessageWhere(), orderBy: { createdAt: 'desc' }, take: 1, include: { sender: true } },
       },
     });
 

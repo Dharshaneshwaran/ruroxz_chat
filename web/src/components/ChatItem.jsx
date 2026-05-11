@@ -11,6 +11,8 @@ export default function ChatItem({ chat, currentUserId, active, onClick, onDelet
   const last = chat.messages?.[0];
   const preview = typing.length > 0
     ? 'typing...'
+    : last?.isSnap
+    ? 'Snap message'
     : last?.content || (last?.mediaUrl ? 'Media' : '');
   const time = last ? formatTime(new Date(last.createdAt)) : '';
   const initials = (name || 'U').charAt(0).toUpperCase();

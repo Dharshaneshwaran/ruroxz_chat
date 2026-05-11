@@ -7,6 +7,7 @@ let typingTimer = null;
 export default function ChatInput({ chatId, userId, onSend }) {
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isSnap, setIsSnap] = useState(false);
   const fileRef = useRef(null);
   const textRef = useRef(null);
 
@@ -33,8 +34,9 @@ export default function ChatInput({ chatId, userId, onSend }) {
   const send = () => {
     const content = text.trim();
     if (!content) return;
-    onSend({ content });
+    onSend({ content, isSnap });
     setText('');
+    setIsSnap(false);
     if (textRef.current) textRef.current.style.height = 'auto';
     clearTimeout(typingTimer);
     socket.emit('stop_typing', { chatId, userId });
@@ -56,43 +58,54 @@ export default function ChatInput({ chatId, userId, onSend }) {
       alert(`File too large. Max ${MAX_FILE_MB}MB.`);
       return;
     }
-    onSend({ file });
+    onSend({ file, isSnap });
+    setIsSnap(false);
     e.target.value = '';
   };
 
   const hasText = text.trim().length > 0;
 
   return (
-    <div className="composer">
-      <button className="wa-icon-btn" title="Attach" onClick={() => fileRef.current?.click()}>
-        <PlusIcon />
-      </button>
-      <input
-        type="file"
-        ref={fileRef}
-        style={{ display: 'none' }}
-        onChange={handleFile}
-        accept="image/*,application/pdf,video/*,audio/*,.doc,.docx,.xls,.xlsx"
-      />
-      <button className="wa-icon-btn" title="Emoji">
-        <SmileIcon />
-      </button>
-
-      <div className="composer-box">
-        <textarea
-          ref={textRef}
-          className="input-field"
-          value={text}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message"
-          rows={1}
-        />
+    <div className="composer-shell">
+      <div className={`snap-bar ${isSnap ? 'active' : ''}`}>
+        <button type="button" className="snap-toggle" onClick={() => setIsSnap((value) => !value)}>
+          <SnapIcon />
+          <span>{isSnap ? 'Snap is on' : 'Snap'}</span>
+        </button>
+        <span className="snap-hint">{isSnap ? 'Deletes automatically after 24 hours.' : 'Post a 24-hour snap message'}</span>
       </div>
 
-      <button className="wa-icon-btn" onClick={hasText ? send : undefined} title={hasText ? 'Send' : 'Voice message'}>
-        {hasText ? <SendIcon /> : <MicIcon />}
-      </button>
+      <div className="composer">
+        <button className="wa-icon-btn" title="Attach" onClick={() => fileRef.current?.click()}>
+          <PlusIcon />
+        </button>
+        <input
+          type="file"
+          ref={fileRef}
+          style={{ display: 'none' }}
+          onChange={handleFile}
+          accept="image/*,application/pdf,video/*,audio/*,.doc,.docx,.xls,.xlsx"
+        />
+        <button className="wa-icon-btn" title="Emoji">
+          <SmileIcon />
+        </button>
+
+        <div className="composer-box">
+          <textarea
+            ref={textRef}
+            className="input-field"
+            value={text}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={isSnap ? 'Post a 24-hour snap' : 'Type a message'}
+            rows={1}
+          />
+        </div>
+
+        <button className="wa-icon-btn" onClick={hasText ? send : undefined} title={hasText ? 'Send' : 'Voice message'}>
+          {hasText ? <SendIcon /> : <MicIcon />}
+        </button>
+      </div>
     </div>
   );
 }
@@ -127,6 +140,16 @@ function MicIcon() {
     <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z" />
       <path d="M19 11a7 7 0 0 1-14 0M12 18v3" />
+    </svg>
+  );
+}
+
+function SnapIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M18 5l2-2M20 3v5h-5" />
     </svg>
   );
 }

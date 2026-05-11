@@ -471,6 +471,16 @@
 
 .bubble-time { color: #c7d3d9; font-size: 13px; }
 
+.snap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffd2ea;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
 .message-phone-link {
   border: 0;
   background: transparent;
@@ -553,14 +563,60 @@
   cursor: not-allowed;
 }
 
+.composer-shell {
+  background: #21172b;
+  border-top: 1px solid #34243f;
+  flex: 0 0 auto;
+}
+
+.snap-bar {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px 0 22px;
+  color: var(--wa-soft);
+}
+
+.snap-bar.active {
+  color: #ffe7f4;
+}
+
+.snap-toggle {
+  height: 34px;
+  border: 1px solid #56405f;
+  border-radius: 17px;
+  background: #2b2036;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 13px;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.snap-bar.active .snap-toggle {
+  border-color: #f0a6ca;
+  background: #5b2d78;
+}
+
+.snap-hint {
+  min-width: 0;
+  color: var(--wa-muted);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .composer {
   min-height: 78px;
   display: flex;
   align-items: flex-end;
   gap: 12px;
   padding: 11px 15px 15px 22px;
-  background: #21172b;
-  flex: 0 0 auto;
 }
 
 .composer-box {
@@ -857,3 +913,330 @@
   .chat-bg { padding: 36px 18px 18px; }
   .bubble { max-width: 86%; }
 }
+
+/* ═══════════════════════════════════════
+   THREE-DOT DROPDOWN
+═══════════════════════════════════════ */
+.dots-menu-wrap {
+  position: relative;
+}
+
+.dots-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: #271b31;
+  border: 1px solid #45304f;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  z-index: 300;
+  overflow: hidden;
+  animation: dropIn 0.12s ease;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dots-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border: 0;
+  background: transparent;
+  color: var(--wa-text);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dots-dropdown-item:hover { background: #34243f; }
+.dots-dropdown-item.danger { color: #ff6b6b; }
+.dots-dropdown-item.danger:hover { background: #3d1f1f; }
+
+.dots-dropdown-divider {
+  height: 1px;
+  background: #45304f;
+  margin: 2px 0;
+}
+
+/* ═══════════════════════════════════════
+   SETTINGS PAGE
+═══════════════════════════════════════ */
+.settings-page {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--wa-bg);
+  overflow: hidden;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  height: 72px;
+  background: #1a1221;
+  border-bottom: 1px solid #3c2a45;
+  flex: 0 0 auto;
+}
+
+.settings-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--wa-text);
+}
+
+.settings-back-btn {
+  width: 38px; height: 38px;
+  border: 0; border-radius: 50%;
+  background: transparent;
+  color: var(--wa-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.settings-back-btn:hover { background: #34243f; color: var(--wa-text); }
+
+/* Scrollable body */
+.settings-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 40px;
+}
+
+/* ── Profile card ── */
+.settings-profile-card {
+  background: #1d1425;
+  border-bottom: 8px solid #160f1f;
+  padding: 28px 28px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-avatar-wrap {
+  position: relative;
+  width: 80px;
+  margin: 0 auto 20px;
+}
+
+.settings-avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6d3b8f, #3a1f55);
+  color: white;
+  font-size: 32px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.settings-avatar-edit {
+  position: absolute;
+  bottom: 0; right: -4px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid #1d1425;
+  background: var(--wa-green);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+
+/* Profile fields (inline edit like WhatsApp) */
+.settings-profile-field {
+  padding: 14px 0;
+  border-bottom: 1px solid #2e1f3a;
+}
+.settings-profile-field:last-child { border-bottom: none; }
+
+.spf-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wa-green);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spf-view-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  border-radius: 6px;
+}
+.spf-view-row:hover:not(.no-hover) { background: #271b31; padding: 4px 8px; margin: 0 -8px; }
+.spf-view-row.no-hover { cursor: default; }
+
+.spf-value {
+  font-size: 16px;
+  color: var(--wa-text);
+  flex: 1;
+}
+.spf-value em { color: var(--wa-muted); font-style: normal; }
+.spf-value.muted { color: var(--wa-muted); }
+
+.spf-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spf-input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--wa-green);
+  color: var(--wa-text);
+  font-size: 16px;
+  padding: 4px 0;
+  outline: none;
+}
+
+.spf-save, .spf-cancel {
+  width: 32px; height: 32px;
+  border: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.spf-save  { background: var(--wa-green); color: white; }
+.spf-cancel { background: #45304f; color: var(--wa-muted); }
+.spf-save:hover  { opacity: 0.85; }
+.spf-cancel:hover { background: #5a3f6a; }
+
+/* ── Setting rows ── */
+.settings-rows {
+  background: #1d1425;
+  border-bottom: 8px solid #160f1f;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #2e1f3a;
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row.clickable { cursor: pointer; }
+.settings-row.clickable:hover { background: #231929; }
+
+.settings-row-icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: #2e1f3a;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--wa-muted);
+  flex: 0 0 auto;
+}
+
+.settings-row-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-row-label {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--wa-text);
+}
+
+.settings-row-sub {
+  font-size: 13px;
+  color: var(--wa-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Section label (like "Messages" header in notifications) */
+.settings-section-label {
+  padding: 20px 24px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wa-green);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Toggle */
+.settings-toggle {
+  position: relative;
+  display: inline-block;
+  width: 46px; height: 24px;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.settings-toggle input { opacity: 0; width: 0; height: 0; }
+.settings-toggle-slider {
+  position: absolute; inset: 0;
+  background: #45304f;
+  border-radius: 24px;
+  transition: 0.2s;
+}
+.settings-toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  left: 3px; bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.settings-toggle input:checked + .settings-toggle-slider { background: var(--wa-green); }
+.settings-toggle input:checked + .settings-toggle-slider::before { transform: translateX(22px); }
+
+/* Logout button */
+.settings-logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 24px;
+  border: 0;
+  background: #1d1425;
+  color: #ff6b6b;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 8px solid #160f1f;
+}
+.settings-logout-btn:hover { background: #2a1520; }
+
+/* Toast notification */
+.settings-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #382842;
+  color: var(--wa-text);
+  padding: 10px 22px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  z-index: 999;
+  animation: fadeUp 0.2s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+
+

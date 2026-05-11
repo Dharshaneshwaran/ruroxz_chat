@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useChatStore } from './store/chatStore';
@@ -8,27 +8,30 @@ import socket from './services/socket';
 import api from './services/api';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
+import Settings from './pages/Settings';
 import ChatItem from './components/ChatItem';
 import './styles/bubbles.css';
 
+/* ─── Icon helper ─── */
 function Icon({ name, size = 24 }) {
-  const common = { stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
+  const c = { stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   const paths = {
-    chats: <><path {...common} d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /><path {...common} d="M8 9h8M8 13h5" /></>,
-    status: <><path {...common} d="M4 12a8 8 0 0 1 8-8" /><path {...common} d="M20 12a8 8 0 0 1-8 8" /><path {...common} d="M8 4.9a8 8 0 0 1 11.1 7.1" /><path {...common} d="M16 19.1A8 8 0 0 1 4.9 8" /><circle {...common} cx="12" cy="12" r="3" /></>,
-    channels: <><path {...common} d="M7 8a5 5 0 0 1 10 0c0 4-5 8-5 8S7 12 7 8z" /><path {...common} d="M5 19h14" /></>,
-    groups: <><path {...common} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle {...common} cx="9" cy="7" r="4" /><path {...common} d="M22 21v-2a4 4 0 0 0-3-3.87" /><path {...common} d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
-    sparkle: <><path {...common} d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /><path {...common} d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></>,
-    newChat: <><path {...common} d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h8" /><path {...common} d="M19 3v6M16 6h6" /></>,
-    dots: <><circle cx="12" cy="5" r="1.8" fill="currentColor" /><circle cx="12" cy="12" r="1.8" fill="currentColor" /><circle cx="12" cy="19" r="1.8" fill="currentColor" /></>,
-    search: <><circle {...common} cx="11" cy="11" r="7" /><path {...common} d="M20 20l-3.5-3.5" /></>,
-    bellOff: <><path {...common} d="M13.7 21a2 2 0 0 1-3.4 0" /><path {...common} d="M18 8a6 6 0 0 0-8.3-5.5" /><path {...common} d="M5.3 5.3A6 6 0 0 0 4 9c0 7-3 7-3 7h15" /><path {...common} d="M2 2l20 20" /></>,
-    close: <><path {...common} d="M18 6L6 18M6 6l12 12" /></>,
-    image: <><rect {...common} x="3" y="3" width="18" height="18" rx="2" /><circle {...common} cx="8.5" cy="8.5" r="1.5" /><path {...common} d="M21 15l-5-5L5 21" /></>,
+    chats:    <><path {...c} d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" /><path {...c} d="M8 9h8M8 13h5" /></>,
+    status:   <><path {...c} d="M4 12a8 8 0 0 1 8-8" /><path {...c} d="M20 12a8 8 0 0 1-8 8" /><circle {...c} cx="12" cy="12" r="3" /></>,
+    channels: <><path {...c} d="M7 8a5 5 0 0 1 10 0c0 4-5 8-5 8S7 12 7 8z" /><path {...c} d="M5 19h14" /></>,
+    groups:   <><path {...c} d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle {...c} cx="9" cy="7" r="4" /><path {...c} d="M22 21v-2a4 4 0 0 0-3-3.87" /><path {...c} d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+    sparkle:  <><path {...c} d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" /></>,
+    newChat:  <><path {...c} d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h8" /><path {...c} d="M19 3v6M16 6h6" /></>,
+    dots:     <><circle cx="12" cy="5" r="1.8" fill="currentColor" /><circle cx="12" cy="12" r="1.8" fill="currentColor" /><circle cx="12" cy="19" r="1.8" fill="currentColor" /></>,
+    search:   <><circle {...c} cx="11" cy="11" r="7" /><path {...c} d="M20 20l-3.5-3.5" /></>,
+    bellOff:  <><path {...c} d="M13.7 21a2 2 0 0 1-3.4 0" /><path {...c} d="M18 8a6 6 0 0 0-8.3-5.5" /><path {...c} d="M5.3 5.3A6 6 0 0 0 4 9c0 7-3 7-3 7h15" /><path {...c} d="M2 2l20 20" /></>,
+    close:    <><path {...c} d="M18 6L6 18M6 6l12 12" /></>,
+    image:    <><rect {...c} x="3" y="3" width="18" height="18" rx="2" /><circle {...c} cx="8.5" cy="8.5" r="1.5" /><path {...c} d="M21 15l-5-5L5 21" /></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
 
+/* ─── Generic modal wrapper ─── */
 function Modal({ title, children, onClose }) {
   return (
     <div className="modal-backdrop">
@@ -43,43 +46,47 @@ function Modal({ title, children, onClose }) {
   );
 }
 
-function SettingsModal({ onClose }) {
-  const { user, setUser } = useAuthStore();
-  const [name, setName] = useState(user?.displayName || '');
-  const [phone, setPhone] = useState(user?.phone || '');
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState({ text: '', type: '' });
+/* ─── Three-dot dropdown ─── */
+function DotsMenu({ onSettings, onLogout }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMsg({ text: '', type: '' });
-    try {
-      const res = await api.put('/auth/profile', { displayName: name, phoneNumber: phone });
-      setUser(res.data);
-      setMsg({ text: 'Profile updated successfully.', type: 'success' });
-      setTimeout(onClose, 1000);
-    } catch (err) {
-      setMsg({ text: err.response?.data?.error || 'Failed to update profile', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   return (
-    <Modal title="Profile Settings" onClose={onClose}>
-      {msg.text && <p className={`modal-message ${msg.type}`}>{msg.text}</p>}
-      <form onSubmit={handleUpdate} className="modal-form">
-        <label>Display Name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
-        <label>Phone Number</label>
-        <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91XXXXXXXXXX" />
-        <button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Changes'}</button>
-      </form>
-    </Modal>
+    <div className="dots-menu-wrap" ref={ref}>
+      <button className="icon-btn" onClick={() => setOpen(v => !v)} title="Menu">
+        <Icon name="dots" size={22} />
+      </button>
+      {open && (
+        <div className="dots-dropdown">
+          <button className="dots-dropdown-item" onClick={() => { setOpen(false); onSettings(); }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            Settings
+          </button>
+          <div className="dots-dropdown-divider" />
+          <button className="dots-dropdown-item danger" onClick={() => { setOpen(false); onLogout(); }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Log out
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
+/* ─── New chat modal ─── */
 function NewChatModal({ onClose, onCreated }) {
   const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState('direct');
@@ -94,93 +101,57 @@ function NewChatModal({ onClose, onCreated }) {
   const canLookupPhone = tab === 'direct' && isPhoneLike(input);
 
   useEffect(() => {
-    setLookupResult(null);
-    setErr('');
-
-    if (!canLookupPhone || normalizedInput.length < 6) {
-      setLookupLoading(false);
-      return undefined;
-    }
-
+    setLookupResult(null); setErr('');
+    if (!canLookupPhone || normalizedInput.length < 6) { setLookupLoading(false); return; }
     let cancelled = false;
     const timer = setTimeout(async () => {
       setLookupLoading(true);
       try {
         const res = await api.get('/auth/lookup-phone', { params: { phone: normalizedInput } });
-        if (!cancelled) {
-          setLookupResult(res.data);
-          setErr('');
-        }
+        if (!cancelled) { setLookupResult(res.data); setErr(''); }
       } catch (error) {
-        if (!cancelled) {
-          setLookupResult(null);
-          setErr(error.response?.status === 404 ? 'No account found for this number' : 'Could not check this number');
-        }
-      } finally {
-        if (!cancelled) setLookupLoading(false);
-      }
+        if (!cancelled) { setLookupResult(null); setErr(error.response?.status === 404 ? 'No account found for this number' : 'Could not check this number'); }
+      } finally { if (!cancelled) setLookupLoading(false); }
     }, 450);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [canLookupPhone, normalizedInput, tab]);
 
   const startDirect = async (e) => {
     e?.preventDefault();
     if (!input.trim()) return;
-    setLoading(true);
-    setErr('');
+    setLoading(true); setErr('');
     try {
       const contact = canLookupPhone ? normalizedInput : input.trim();
       const res = await api.post('/chats', { participantPhones: [contact], isGroup: false });
       onCreated(res.data);
-    } catch (error) {
-      setErr(error.response?.data?.error || 'User not found');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { setErr(error.response?.data?.error || 'User not found'); }
+    finally { setLoading(false); }
   };
 
   const createGroup = async (e) => {
     e.preventDefault();
-    if (!groupName.trim() || members.length === 0) {
-      setErr('Group name and at least one member are required');
-      return;
-    }
-    setLoading(true);
-    setErr('');
+    if (!groupName.trim() || members.length === 0) { setErr('Group name and at least one member are required'); return; }
+    setLoading(true); setErr('');
     try {
       const res = await api.post('/chats', { participantPhones: members, chatName: groupName.trim(), isGroup: true });
       onCreated(res.data);
-    } catch (error) {
-      setErr(error.response?.data?.error || 'Failed to create group');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { setErr(error.response?.data?.error || 'Failed to create group'); }
+    finally { setLoading(false); }
   };
 
   const messageSelf = async () => {
     if (!user) return;
-    setLoading(true);
-    setErr('');
+    setLoading(true); setErr('');
     try {
       const res = await api.post('/chats', { participantIds: [user.id], isGroup: false });
       onCreated(res.data);
-    } catch (error) {
-      setErr(error.response?.data?.error || 'Failed to start self chat');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { setErr(error.response?.data?.error || 'Failed to start self chat'); }
+    finally { setLoading(false); }
   };
 
   const addMember = () => {
     const next = input.trim();
-    if (next && !members.includes(next)) {
-      setMembers((current) => [...current, next]);
-      setInput('');
-    }
+    if (next && !members.includes(next)) { setMembers(c => [...c, next]); setInput(''); }
   };
 
   return (
@@ -194,13 +165,7 @@ function NewChatModal({ onClose, onCreated }) {
         <form onSubmit={startDirect} className="modal-form">
           <input value={input} onChange={(e) => setInput(e.target.value)} autoFocus placeholder="Email, phone number, or user id" />
           {canLookupPhone && (
-            <ContactLookupCard
-              lookupLoading={lookupLoading}
-              lookupResult={lookupResult}
-              phone={normalizedInput}
-              onChat={() => startDirect()}
-              chatLoading={loading}
-            />
+            <ContactLookupCard lookupLoading={lookupLoading} lookupResult={lookupResult} phone={normalizedInput} onChat={() => startDirect()} chatLoading={loading} />
           )}
           {!lookupResult && <button type="submit" disabled={loading || lookupLoading}>{loading ? 'Starting...' : lookupLoading ? 'Checking...' : 'Start Chat'}</button>}
           <button type="button" onClick={messageSelf} disabled={loading || !user} className="secondary">Message myself</button>
@@ -214,11 +179,8 @@ function NewChatModal({ onClose, onCreated }) {
           </div>
           {members.length > 0 && (
             <div className="member-chips">
-              {members.map((member) => (
-                <span key={member}>
-                  {member}
-                  <button type="button" onClick={() => setMembers(members.filter((item) => item !== member))}>x</button>
-                </span>
+              {members.map((m) => (
+                <span key={m}>{m}<button type="button" onClick={() => setMembers(members.filter(x => x !== m))}>x</button></span>
               ))}
             </div>
           )}
@@ -230,42 +192,52 @@ function NewChatModal({ onClose, onCreated }) {
 }
 
 function ContactLookupCard({ lookupLoading, lookupResult, phone, onChat, chatLoading }) {
-  if (lookupLoading) {
-    return <div className="contact-lookup-card muted">Checking database...</div>;
-  }
-
+  if (lookupLoading) return <div className="contact-lookup-card muted">Checking database...</div>;
   if (!lookupResult?.user) return null;
-
   const contact = lookupResult.user;
   const name = contact.displayName || contact.phone || contact.email || 'Contact';
-
   return (
     <div className="contact-lookup-card">
       <div className="contact-lookup-main">
         <div className="wa-avatar small">{name.charAt(0).toUpperCase()}</div>
-        <div>
-          <strong>{name}</strong>
-          <span>{lookupResult.isSelf ? 'This is your account' : contact.phone}</span>
-        </div>
+        <div><strong>{name}</strong><span>{lookupResult.isSelf ? 'This is your account' : contact.phone}</span></div>
       </div>
       <div className="contact-actions">
-        <button type="button" onClick={onChat} disabled={chatLoading}>
-          {chatLoading ? 'Opening...' : 'Chat'}
-        </button>
+        <button type="button" onClick={onChat} disabled={chatLoading}>{chatLoading ? 'Opening...' : 'Chat'}</button>
       </div>
     </div>
   );
 }
 
-function normalizePhone(value) {
-  return String(value || '').trim().replace(/[^\d+]/g, '');
-}
-
+function normalizePhone(value) { return String(value || '').trim().replace(/[^\d+]/g, ''); }
 function isPhoneLike(value) {
-  const next = String(value || '').trim();
-  return next.length > 0 && !next.includes('@') && /^[+\d\s().-]+$/.test(next);
+  const v = String(value || '').trim();
+  return v.length > 0 && !v.includes('@') && /^[+\d\s().-]+$/.test(v);
 }
 
+/* ─── Rail button ─── */
+function RailButton({ children, title, active, badge }) {
+  return (
+    <button className={`rail-btn ${active ? 'active' : ''}`} title={title}>
+      {children}
+      {badge ? <span>{badge}</span> : null}
+    </button>
+  );
+}
+
+/* ─── Welcome pane ─── */
+function WelcomePane({ onNewChat }) {
+  return (
+    <section className="welcome-pane">
+      <div className="welcome-mark">RC</div>
+      <h2>RuroxZ Chat</h2>
+      <p>Send and receive messages instantly from this browser.</p>
+      <button onClick={onNewChat}>Start a new conversation</button>
+    </section>
+  );
+}
+
+/* ─── Main chat layout ─── */
 function ChatLayout() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -274,12 +246,11 @@ function ChatLayout() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [modal, setModal] = useState(false);
-  const [settingsModal, setSettingsModal] = useState(false);
   const [noticeVisible, setNoticeVisible] = useState(true);
   const navigate = useNavigate();
   const { chatId: activeChatId } = useParams();
 
-  const chatIds = chats.map((chat) => chat.id);
+  const chatIds = chats.map((c) => c.id);
   useSocket(chatIds);
 
   useEffect(() => {
@@ -292,43 +263,29 @@ function ChatLayout() {
     try {
       const res = await api.get('/chats');
       setChats(res.data);
-    } catch (err) {
-      console.error('fetchChats:', err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error('fetchChats:', err); }
+    finally { setLoading(false); }
   };
 
-  const handleChatCreated = (chat) => {
-    addChat(chat);
-    setModal(false);
-    navigate(`/chat/${chat.id}`);
-  };
+  const handleChatCreated = (chat) => { addChat(chat); setModal(false); navigate(`/chat/${chat.id}`); };
 
   const handleDeleteChat = async (chatId) => {
     try {
       await api.delete(`/chats/${chatId}`);
-      setChats(chats.filter((chat) => chat.id !== chatId));
+      setChats(chats.filter((c) => c.id !== chatId));
       if (activeChatId === chatId) navigate('/');
-    } catch (err) {
-      console.error('handleDeleteChat:', err);
-      alert('Failed to delete chat');
-    }
+    } catch (err) { console.error('handleDeleteChat:', err); alert('Failed to delete chat'); }
   };
 
-  const handleLogout = () => {
-    reset();
-    logout();
-  };
+  const handleLogout = () => { reset(); logout(); };
 
-  const unreadCount = useMemo(() => chats.filter((chat) => chat.messages?.[0] && chat.messages[0].senderId !== user?.id).length, [chats, user?.id]);
+  const unreadCount = useMemo(() => chats.filter((c) => c.messages?.[0] && c.messages[0].senderId !== user?.id).length, [chats, user?.id]);
   const displayName = user?.displayName || user?.email || user?.phone || 'Me';
 
   const filtered = chats.filter((chat) => {
     const other = chat.participants?.find((p) => p.userId !== user?.id);
     const name = chat.isGroup ? chat.name : (other?.user?.displayName || other?.user?.email || other?.user?.phone || '');
-    const matchesSearch = name?.toLowerCase().includes(search.toLowerCase());
-    if (!matchesSearch) return false;
+    if (!name?.toLowerCase().includes(search.toLowerCase())) return false;
     if (filter === 'groups') return chat.isGroup;
     if (filter === 'unread') return chat.messages?.[0] && chat.messages[0].senderId !== user?.id;
     if (filter === 'favorites') return Boolean(chat.isFavorite || chat.favorite);
@@ -337,6 +294,7 @@ function ChatLayout() {
 
   return (
     <div className="wa-shell">
+      {/* Left rail */}
       <aside className="wa-rail">
         <div className="rail-top">
           <RailButton active badge={unreadCount || null} title="Chats"><Icon name="chats" /></RailButton>
@@ -348,16 +306,25 @@ function ChatLayout() {
         </div>
         <div className="rail-bottom">
           <RailButton title="Archived"><Icon name="image" /></RailButton>
-          <button className="rail-avatar" onClick={() => setSettingsModal(true)} title="Profile settings">{displayName.charAt(0).toUpperCase()}</button>
+          <button className="rail-avatar" onClick={() => navigate('/settings')} title="Profile & Settings">
+            {displayName.charAt(0).toUpperCase()}
+          </button>
         </div>
       </aside>
 
+      {/* Sidebar */}
       <aside className="wa-sidebar">
         <header className="sidebar-titlebar">
-          <h1>WhatsApp</h1>
+          <h1>RuroxZ Chat</h1>
           <div>
-            <button className="icon-btn" onClick={() => setModal(true)} title="New chat"><Icon name="newChat" size={22} /></button>
-            <button className="icon-btn" onClick={handleLogout} title="Log out"><Icon name="dots" size={22} /></button>
+            <button className="icon-btn" onClick={() => setModal(true)} title="New chat">
+              <Icon name="newChat" size={22} />
+            </button>
+            {/* Three-dot menu → Settings / Log out */}
+            <DotsMenu
+              onSettings={() => navigate('/settings')}
+              onLogout={handleLogout}
+            />
           </div>
         </header>
 
@@ -367,10 +334,10 @@ function ChatLayout() {
         </div>
 
         <div className="filter-row">
-          <button className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}>All</button>
-          <button className={filter === 'unread' ? 'active' : ''} onClick={() => setFilter('unread')}>Unread {unreadCount || ''}</button>
-          <button className={filter === 'favorites' ? 'active' : ''} onClick={() => setFilter('favorites')}>Favorites</button>
-          <button className={filter === 'groups' ? 'active' : ''} onClick={() => setFilter('groups')}>Groups</button>
+          <button className={filter === 'all'      ? 'active' : ''} onClick={() => setFilter('all')}>All</button>
+          <button className={filter === 'unread'   ? 'active' : ''} onClick={() => setFilter('unread')}>Unread {unreadCount || ''}</button>
+          <button className={filter === 'favorites'? 'active' : ''} onClick={() => setFilter('favorites')}>Favorites</button>
+          <button className={filter === 'groups'   ? 'active' : ''} onClick={() => setFilter('groups')}>Groups</button>
           <button className="round" onClick={() => setModal(true)} title="New chat">+</button>
         </div>
 
@@ -405,53 +372,32 @@ function ChatLayout() {
           )}
         </div>
 
-        <button className="windows-cta">Get WhatsApp for Windows</button>
+        <button className="windows-cta">Get RuroxZ Chat for Windows</button>
       </aside>
 
+      {/* Main content */}
       <main className="wa-main">
         <Routes>
           <Route path="/chat/:chatId" element={<Chat />} />
-          <Route path="*" element={<WelcomePane onNewChat={() => setModal(true)} />} />
+          <Route path="/settings"    element={<Settings />} />
+          <Route path="*"            element={<WelcomePane onNewChat={() => setModal(true)} />} />
         </Routes>
       </main>
 
       {modal && <NewChatModal onClose={() => setModal(false)} onCreated={handleChatCreated} />}
-      {settingsModal && <SettingsModal onClose={() => setSettingsModal(false)} />}
     </div>
   );
 }
 
-function RailButton({ children, title, active, badge }) {
-  return (
-    <button className={`rail-btn ${active ? 'active' : ''}`} title={title}>
-      {children}
-      {badge ? <span>{badge}</span> : null}
-    </button>
-  );
-}
-
-function WelcomePane({ onNewChat }) {
-  return (
-    <section className="welcome-pane">
-      <div className="welcome-mark">WA</div>
-      <h2>WhatsApp Web</h2>
-      <p>Send and receive messages instantly from this browser.</p>
-      <button onClick={onNewChat}>Start a new conversation</button>
-    </section>
-  );
-}
-
+/* ─── Root app ─── */
 export default function App() {
-  const user = useAuthStore((s) => s.user);
+  const user    = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    if (!token) {
-      setBooting(false);
-      return;
-    }
+    if (!token) { setBooting(false); return; }
     import('./services/api').then(({ default: apiClient }) => {
       apiClient.get('/auth/me')
         .then((res) => setUser(res.data))
@@ -460,18 +406,15 @@ export default function App() {
     });
   }, [setUser]);
 
-  if (booting) {
-    return (
-      <div className="boot-screen">
-        <div className="spinner" />
-      </div>
-    );
-  }
+  if (booting) return <div className="boot-screen"><div className="spinner" /></div>;
 
   return (
     <BrowserRouter>
       <Routes>
-        {!user ? <Route path="/*" element={<Login />} /> : <Route path="/*" element={<ChatLayout />} />}
+        {!user
+          ? <Route path="/*" element={<Login />} />
+          : <Route path="/*" element={<ChatLayout />} />
+        }
       </Routes>
     </BrowserRouter>
   );
