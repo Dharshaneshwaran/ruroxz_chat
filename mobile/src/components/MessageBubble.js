@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   wrapper: { marginVertical: 2, paddingHorizontal: 8 },
   wrapperOwn: { alignItems: 'flex-end' },
   wrapperOther: { alignItems: 'flex-start' },
-  senderName: { fontSize: 11, color: '#6D28D9', marginBottom: 2, marginLeft: 4 },
+  senderName: { fontSize: 11, color: '#25D366', marginBottom: 2, marginLeft: 4 },
   bubble: {
     maxWidth: '75%', borderRadius: 12, padding: 8,
     shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1,

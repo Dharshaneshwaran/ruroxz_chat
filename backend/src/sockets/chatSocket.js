@@ -1,6 +1,9 @@
 const prisma = require('../config/db');
 const { sendPushNotification } = require('../services/notificationService');
 
+const SNAP_TTL_MS = 24 * 60 * 60 * 1000;
+const toBoolean = (value) => value === true || value === 'true' || value === '1';
+
 // userId -> socketId
 const onlineUsers = new Map();
 
@@ -19,12 +22,21 @@ const chatSocket = (io) => {
       }
     });
 
-    socket.on('send_message', async ({ chatId, senderId, content, mediaUrl, mediaType }) => {
+    socket.on('send_message', async ({ chatId, senderId, content, mediaUrl, mediaType, isSnap }) => {
       try {
         if (!chatId || !senderId || (!content && !mediaUrl)) return;
+        const shouldExpire = toBoolean(isSnap);
 
         const message = await prisma.message.create({
-          data: { chatId, senderId, content: content || null, mediaUrl: mediaUrl || null, mediaType: mediaType || null },
+          data: {
+            chatId,
+            senderId,
+            content: content || null,
+            mediaUrl: mediaUrl || null,
+            mediaType: mediaType || null,
+            isSnap: shouldExpire,
+            expiresAt: shouldExpire ? new Date(Date.now() + SNAP_TTL_MS) : null,
+          },
           include: { sender: true },
         });
 

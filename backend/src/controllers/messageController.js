@@ -1,5 +1,10 @@
 const prisma = require('../config/db');
 
+const SNAP_TTL_MS = 24 * 60 * 60 * 1000;
+
+const toBoolean = (value) => value === true || value === 'true' || value === '1';
+const getSnapExpiry = () => new Date(Date.now() + SNAP_TTL_MS);
+
 const getMessages = async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -11,7 +16,13 @@ const getMessages = async (req, res) => {
     if (!participant) return res.status(403).json({ error: 'Not a participant' });
 
     const messages = await prisma.message.findMany({
-      where: { chatId },
+      where: {
+        chatId,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } },
+        ],
+      },
       include: { sender: true },
       orderBy: { createdAt: 'desc' },
       take: parseInt(limit),
@@ -29,6 +40,7 @@ const sendMessage = async (req, res) => {
   try {
     const { chatId } = req.params;
     const { content } = req.body;
+    const isSnap = toBoolean(req.body.isSnap);
     const mediaUrl = req.file?.path || null;
     const mediaType = req.file ? req.file.mimetype.split('/')[0] : null;
 
@@ -42,7 +54,15 @@ const sendMessage = async (req, res) => {
     if (!participant) return res.status(403).json({ error: 'Not a participant' });
 
     const message = await prisma.message.create({
-      data: { chatId, senderId: req.user.id, content, mediaUrl, mediaType },
+      data: {
+        chatId,
+        senderId: req.user.id,
+        content,
+        mediaUrl,
+        mediaType,
+        isSnap,
+        expiresAt: isSnap ? getSnapExpiry() : null,
+      },
       include: { sender: true },
     });
 

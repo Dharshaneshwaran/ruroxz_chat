@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useChatStore } from '../store/chatStore';
@@ -10,7 +10,7 @@ import ChatInput from '../components/ChatInput';
 export default function Chat() {
   const { chatId } = useParams();
   const user = useAuthStore((s) => s.user);
-  const { messages, setMessages, chats, typing } = useChatStore();
+  const { messages, setMessages, addMessage, updateChatLastMessage, chats, typing } = useChatStore();
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef(null);
   const containerRef = useRef(null);
@@ -25,20 +25,7 @@ export default function Chat() {
   const typingUsers = typing[chatId] || [];
   const isTyping = typingUsers.length > 0;
 
-  useEffect(() => {
-    setLoading(true);
-    fetchMessages();
-    socket.emit('join_chats', { userId: user?.id, chatIds: [chatId] });
-  }, [chatId]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
-    if (isNearBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages.length]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await api.get(`/chats/${chatId}/messages`);
       setMessages(chatId, res.data);
@@ -48,29 +35,43 @@ export default function Chat() {
       setLoading(false);
       setTimeout(() => bottomRef.current?.scrollIntoView(), 50);
     }
-  };
+  }, [chatId, setMessages]);
 
-  const handleSend = useCallback(async ({ content, file }) => {
+  useEffect(() => {
+    setLoading(true);
+    fetchMessages();
+    socket.emit('join_chats', { userId: user?.id, chatIds: [chatId] });
+  }, [chatId, fetchMessages, user?.id]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+    if (isNearBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages.length]);
+
+  const handleSend = useCallback(async ({ content, file, isSnap }) => {
     try {
       if (file) {
         const fd = new FormData();
         fd.append('media', file);
+        fd.append('isSnap', String(Boolean(isSnap)));
         if (content) fd.append('content', content);
-        await api.post(`/chats/${chatId}/messages`, fd);
+        const res = await api.post(`/chats/${chatId}/messages`, fd);
+        addMessage(chatId, res.data);
+        updateChatLastMessage(chatId, res.data);
       } else if (content?.trim()) {
-        socket.emit('send_message', { chatId, senderId: user?.id, content: content.trim() });
+        socket.emit('send_message', { chatId, senderId: user?.id, content: content.trim(), isSnap: Boolean(isSnap) });
       }
     } catch (err) {
       console.error('handleSend:', err);
     }
-  }, [chatId, user?.id]);
+  }, [addMessage, chatId, updateChatLastMessage, user?.id]);
 
   const handleDeleteMessage = async (messageId) => {
     try {
       await api.delete(`/chats/${chatId}/messages/${messageId}`);
-      // Remove message from local state
-      const updatedMessages = chatMessages.filter(msg => msg.id !== messageId);
-      setMessages(chatId, updatedMessages);
+      setMessages(chatId, chatMessages.filter((msg) => msg.id !== messageId));
     } catch (err) {
       console.error('handleDeleteMessage:', err);
       alert('Failed to delete message');
@@ -78,33 +79,32 @@ export default function Chat() {
   };
 
   const grouped = groupByDate(chatMessages);
+  const initials = (chatName || 'C').charAt(0).toUpperCase();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#111b21' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: '#202c33', flexShrink: 0, minHeight: 60 }}>
-        <div style={avatar(49, chat?.isGroup ? '#667781' : '#6D28D9')}>
-          {(chatName || 'C').charAt(0).toUpperCase()}
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ color: '#e9edef', fontWeight: 600, fontSize: 17 }}>{chatName}</div>
-          <div style={{ color: isTyping ? '#6D28D9' : '#8696a0', fontSize: 13, minHeight: 18 }}>
-            {isTyping ? 'typing…' : chat?.isGroup ? `${memberCount} members` : ''}
+    <div className="chat-panel">
+      <div className="chat-header">
+        <div className={`wa-avatar large ${chat?.isGroup ? 'group' : ''}`}>{initials}</div>
+        <div className="chat-header-main">
+          <div className="chat-header-name">{chatName}</div>
+          <div className="chat-header-sub">
+            {isTyping ? 'typing...' : chat?.isGroup ? `${memberCount} members` : ''}
           </div>
         </div>
+        <button className="wa-icon-btn" title="Search">
+          <SearchIcon />
+        </button>
+        <button className="wa-icon-btn" title="Menu">
+          <MoreIcon />
+        </button>
       </div>
 
-      {/* Messages */}
-      <div ref={containerRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 5%', background: '#0a0e11' }}>
+      <div ref={containerRef} className="chat-bg">
         {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-            <div style={{ width: 32, height: 32, border: '3px solid #2a3942', borderTop: '3px solid #6D28D9', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          </div>
+          <div className="loading-state"><div className="spinner" /></div>
         ) : chatMessages.length === 0 ? (
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
-            <span style={{ background: '#182229', color: '#8696a0', fontSize: 12.5, padding: '6px 18px', borderRadius: 14 }}>
-              🔒 Start chatting with {chatName}
-            </span>
+          <div className="date-label">
+            <span>Start chatting with {chatName}</span>
           </div>
         ) : (
           grouped.map(({ label, msgs }) => (
@@ -125,7 +125,6 @@ export default function Chat() {
         <div ref={bottomRef} style={{ height: 8 }} />
       </div>
 
-      {/* Input */}
       <ChatInput chatId={chatId} userId={user?.id} onSend={handleSend} />
     </div>
   );
@@ -133,10 +132,8 @@ export default function Chat() {
 
 function DateLabel({ label }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
-      <span style={{ background: '#182229', color: '#8696a0', fontSize: 12, padding: '4px 16px', borderRadius: 12 }}>
-        {label}
-      </span>
+    <div className="date-label">
+      <span>{label}</span>
     </div>
   );
 }
@@ -164,16 +161,21 @@ function groupByDate(messages) {
   }, []);
 }
 
-const avatar = (size, bg) => ({
-  width: size,
-  height: size,
-  borderRadius: '50%',
-  background: bg,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#fff',
-  fontWeight: 700,
-  fontSize: size * 0.38,
-  flexShrink: 0,
-});
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-3.8-3.8" />
+    </svg>
+  );
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="25" height="25" fill="currentColor">
+      <circle cx="12" cy="5" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="12" cy="19" r="2" />
+    </svg>
+  );
+}
