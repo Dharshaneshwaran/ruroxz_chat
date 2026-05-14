@@ -9,6 +9,7 @@ import api from './services/api';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
+import Snap from './pages/Snap';
 import ChatItem from './components/ChatItem';
 import './styles/bubbles.css';
 
@@ -27,6 +28,7 @@ function Icon({ name, size = 24 }) {
     bellOff:  <><path {...c} d="M13.7 21a2 2 0 0 1-3.4 0" /><path {...c} d="M18 8a6 6 0 0 0-8.3-5.5" /><path {...c} d="M5.3 5.3A6 6 0 0 0 4 9c0 7-3 7-3 7h15" /><path {...c} d="M2 2l20 20" /></>,
     close:    <><path {...c} d="M18 6L6 18M6 6l12 12" /></>,
     image:    <><rect {...c} x="3" y="3" width="18" height="18" rx="2" /><circle {...c} cx="8.5" cy="8.5" r="1.5" /><path {...c} d="M21 15l-5-5L5 21" /></>,
+    camera:   <><path {...c} d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle {...c} cx="12" cy="13" r="4" /></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -317,6 +319,9 @@ function ChatLayout() {
         <header className="sidebar-titlebar">
           <h1>RuroxZ Chat</h1>
           <div>
+            <button className="icon-btn" onClick={() => navigate('/snap')} title="Camera">
+              <Icon name="camera" size={22} />
+            </button>
             <button className="icon-btn" onClick={() => setModal(true)} title="New chat">
               <Icon name="newChat" size={22} />
             </button>
@@ -378,9 +383,10 @@ function ChatLayout() {
       {/* Main content */}
       <main className="wa-main">
         <Routes>
-          <Route path="/chat/:chatId" element={<Chat />} />
-          <Route path="/settings"    element={<Settings />} />
-          <Route path="*"            element={<WelcomePane onNewChat={() => setModal(true)} />} />
+           <Route path="/chat/:chatId" element={<Chat />} />
+           <Route path="/settings"    element={<Settings />} />
+           <Route path="/snap"        element={<Snap />} />
+           <Route path="*"            element={<WelcomePane onNewChat={() => setModal(true)} />} />
         </Routes>
       </main>
 

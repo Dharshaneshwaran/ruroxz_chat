@@ -1,0 +1,372 @@
+/* RuroxZ UI Snap Camera */
+.snap-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+.snap-close-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
+  color: #fff;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+}
+
+.snap-close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.snap-camera-view, .snap-preview-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+}
+
+.snap-video, .snap-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.snap-camera-controls {
+  position: absolute;
+  bottom: 50px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.snap-shutter-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: transparent;
+  border: 6px solid #fff;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.snap-shutter-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  transition: width 0.2s, height 0.2s, background 0.2s;
+}
+
+.snap-shutter-btn:active {
+  transform: scale(0.95);
+}
+
+.snap-shutter-btn:active::after {
+  width: 68px;
+  height: 68px;
+  background: #fff;
+}
+
+.snap-editor-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 80px 20px 30px;
+  pointer-events: none;
+}
+
+.snap-editor-overlay > * {
+  pointer-events: auto;
+}
+
+.snap-settings-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.snap-retake-btn {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.snap-retake-btn:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Glassmorphism Toggle */
+.snap-toggle-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 8px 16px 8px 8px;
+  border-radius: 30px;
+}
+
+.snap-toggle-input {
+  display: none;
+}
+
+.snap-toggle-slider {
+  width: 44px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  position: relative;
+  transition: 0.3s;
+  margin-right: 12px;
+}
+
+.snap-toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: 0.3s;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.snap-toggle-input:checked + .snap-toggle-slider {
+  background: #00e676; /* Vibrant green */
+}
+
+.snap-toggle-input:checked + .snap-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.snap-toggle-text {
+  font-weight: 600;
+  font-size: 14px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.snap-bottom-controls {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  padding: 12px 16px;
+  border-radius: 30px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  gap: 12px;
+}
+
+.snap-caption-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+}
+
+.snap-caption-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.snap-send-fab {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #007aff;
+  background: linear-gradient(135deg, #007aff, #00d2ff);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4);
+  transition: transform 0.2s;
+}
+
+.snap-send-fab:hover {
+  transform: scale(1.05);
+}
+
+.snap-send-fab:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Modal for selecting recipient */
+.snap-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.snap-modal {
+  background: #1a1d2d;
+  width: 90%;
+  max-width: 400px;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.snap-modal h3 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.snap-chat-list {
+  overflow-y: auto;
+  margin-bottom: 20px;
+  flex: 1;
+}
+
+.snap-chat-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+  font-size: 16px;
+}
+
+.snap-chat-item:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.snap-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  margin-right: 15px;
+}
+
+.snap-cancel-btn {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.snap-cancel-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.snap-start-prompt {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.snap-start-btn {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 30px 40px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.snap-start-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+}
+
+.snap-start-btn span {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}

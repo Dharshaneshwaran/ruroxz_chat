@@ -117,7 +117,7 @@ export default function ChatScreen({ route, navigation }) {
         contentContainerStyle={styles.messageList}
         ListEmptyComponent={<Text style={styles.empty}>No messages yet</Text>}
       />
-      <ChatInput onSend={handleSend} />
+      <ChatInput onSend={handleSend} navigation={navigation} />
     </KeyboardAvoidingView>
   );
 }

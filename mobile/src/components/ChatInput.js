@@ -5,7 +5,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 
-export default function ChatInput({ onSend }) {
+export default function ChatInput({ onSend, navigation }) {
   const [text, setText] = useState('');
 
   const handleSend = () => {
@@ -40,6 +40,9 @@ export default function ChatInput({ onSend }) {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.iconBtn} onPress={() => navigation?.navigate('Snap')}>
+        <Text style={styles.icon}>📸</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.iconBtn} onPress={handleImagePick}>
         <Text style={styles.icon}>📷</Text>
       </TouchableOpacity>

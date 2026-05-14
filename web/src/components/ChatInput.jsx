@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import socket from '../services/socket';
 
 const MAX_FILE_MB = 16;
@@ -10,6 +11,7 @@ export default function ChatInput({ chatId, userId, onSend }) {
   const [isSnap, setIsSnap] = useState(false);
   const fileRef = useRef(null);
   const textRef = useRef(null);
+  const navigate = useNavigate();
 
   const emitTyping = useCallback(() => {
     if (!isTyping) {
@@ -76,6 +78,9 @@ export default function ChatInput({ chatId, userId, onSend }) {
       </div>
 
       <div className="composer">
+        <button className="wa-icon-btn" title="Camera" onClick={() => navigate('/snap', { state: { chatId } })}>
+          <CameraIcon />
+        </button>
         <button className="wa-icon-btn" title="Attach" onClick={() => fileRef.current?.click()}>
           <PlusIcon />
         </button>
@@ -150,6 +155,16 @@ function SnapIcon() {
       <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" />
       <circle cx="12" cy="12" r="3" />
       <path d="M18 5l2-2M20 3v5h-5" />
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <circle cx="12" cy="13.5" r="3.5" />
+      <path d="M5 7l2-4h10l2 4" />
     </svg>
   );
 }
