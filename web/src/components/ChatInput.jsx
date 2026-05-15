@@ -141,7 +141,6 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
   const hasText = text.trim().length > 0;
 
   return (
-<<<<<<< HEAD
     <>
       {/* ── File Preview Modal ── */}
       {previewFile && (
@@ -372,40 +371,6 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  );
-}
-
-function SmileIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="25" height="25" fill="currentColor">
-      <path d="M2.3 20.7 22 12 2.3 3.3 2.4 10l12.2 2-12.2 2 .1 6.7z" />
-    </svg>
-  );
-}
-
-function MicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z" />
-      <path d="M19 11a7 7 0 0 1-14 0M12 18v3" />
-    </svg>
   );
 }
 
