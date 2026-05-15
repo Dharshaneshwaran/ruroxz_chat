@@ -203,7 +203,7 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
             {/* Caption */}
             <input
               value={caption}
-              onChange={(e) => setCaption(e.target.value)}
+              onChange={(e) => { setCaption(e.target.value); if (uploadError) setUploadError(''); }}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSendFile(); }}
               placeholder="Add a caption…"
               disabled={uploading}
