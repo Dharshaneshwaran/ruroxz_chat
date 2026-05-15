@@ -3,6 +3,7 @@ import EmojiPicker from 'emoji-picker-react';
 import socket from '../services/socket';
 
 const MAX_FILE_MB = 16;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 let typingTimer = null;
 
 export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
@@ -78,7 +79,7 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+    if (file.size > MAX_FILE_BYTES) {
       alert(`File too large. Max ${MAX_FILE_MB} MB.`);
       e.target.value = '';
       return;
