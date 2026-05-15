@@ -331,7 +331,7 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
 
         {/* Attach */}
         <input type="file" ref={fileRef} style={{ display: 'none' }}
-          onChange={handleFile} accept="image/*,application/pdf,video/mp4" />
+          onChange={handleFile} accept="image/*,application/pdf,video/mp4,video/webm,video/ogg" />
         <button className="icon-btn" title="Attach file" onClick={() => fileRef.current?.click()}>
           <svg viewBox="0 0 24 24" width="24" height="24" fill="#aebac1">
             <path d="M21.586 10.461l-10.05 10.075a6.5 6.5 0 0 1-9.143-9.242l10.05-10.075a4 4 0 0 1 5.657 5.657l-9.9 9.9a1.5 1.5 0 0 1-2.121-2.121l9.9-9.9-1.415-1.414-9.9 9.9a3.5 3.5 0 0 0 4.95 4.95l9.9-9.9a6 6 0 0 0-8.484-8.485l-10.05 10.075a8.5 8.5 0 0 0 12.02 12.03l10.05-10.075-1.414-1.375z"/>
