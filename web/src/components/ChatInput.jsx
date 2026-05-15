@@ -95,7 +95,7 @@ export default function ChatInput({ chatId, userId, onSend, onSendFile }) {
 
   const closePreview = () => {
     if (uploading) return;
-    URL.revokeObjectURL(previewUrl);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewFile(null);
     setPreviewUrl(null);
     setCaption('');
